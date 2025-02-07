@@ -1,5 +1,8 @@
 #!/bin/bash
 
+## Script used to transfer data from NIRD to
+## /cluster/shared/vetinst/data/wgs
+
 address=/nird/projects/NS9305K/SEQ-TECH/data_delivery/
 dest=/cluster/shared/vetinst/datasets/wgs/${2}
 
@@ -14,6 +17,7 @@ if test -d $dest; then
     echo "Output directory already exists. Please choose a different name."
     exit 1
 else
+    echo "Creating output directory"
     mkdir $dest
     cd $dest
 fi
@@ -24,10 +28,11 @@ project=$(echo ${2%%_*})
 # Get number of samples and initiate variable for counting
 nsamples=$(wc -l < $1)
 nreads=$(($nsamples*2))
-echo "Identified " $nsamples " samples with " $nreads " readfiles."
+echo "Identified" $nsamples "samples with" $nreads "readfiles"
 loopcount=0
 
 # Transfer files
+echo "Transferring files..."
 while IFS="," read -r name tarball
 do
     # Check to see if the file is present in the tarball
@@ -39,7 +44,7 @@ do
         filenames=$(tar -tvf ${address}${tarball} | grep $name | grep 'fastq.gz$' | awk '{print $6}')
         for i in $filenames;
         do
-            tar -xvf ${address}${tarball} $i
+            tar -xf ${address}${tarball} $i
             mv $i .
             rm -rf ${tarball%.tar}
             # Increment loopcount for each file found
