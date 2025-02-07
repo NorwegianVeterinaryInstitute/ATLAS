@@ -26,5 +26,5 @@ sampleid2,tarballName
 The script will look for the sampleID within the tarball
 and identify the exact file names from that. If a file is
 not found, they will be reported in an output file in the
-resulting output directory, called ``missing_files.csv`.
+resulting output directory, called `missing_files.csv`.
 
