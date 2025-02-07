@@ -71,6 +71,7 @@ do
         do
             tar -xf ${address}${tarball} $i
             mv $i .
+            chmod 444 $(basename $i)
             rm -rf ${tarball%.tar}
             # Increment loopcount for each file found
             ((loopcount++))
