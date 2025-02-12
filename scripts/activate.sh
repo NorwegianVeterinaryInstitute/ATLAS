@@ -66,7 +66,7 @@ do
         # Output filenames that are missing
         echo "$name,$tarball" >> missing_samples.csv
     else
-        filenames=$(tar -tvf ${address}${tarball} | grep $name | grep 'fastq.gz$' | awk '{print $6}')
+        filenames=$(tar -tvf ${address}${tarball} | grep $name | grep -e 'fastq.gz$' -e "fq.gz$" | awk '{print $6}')
         for i in $filenames;
         do
             tar -xf ${address}${tarball} $i
