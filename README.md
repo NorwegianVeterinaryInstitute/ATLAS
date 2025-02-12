@@ -10,7 +10,7 @@ user-defined directory at `/cluster/shared/vetinst/datasets/wgs`.
 
 To use:
 ```
-activate <path_to_csv> project_experiment_YYYYMMDD
+activate <csv> project_experiment_YYYYMMDD
 ```
 
 The naming convention of the output directory is mandatory.
@@ -24,7 +24,21 @@ sampleid2,tarballName
 ```
 
 The script will look for the sampleID within the tarball
-and identify the exact file names from that. If a file is
-not found, they will be reported in an output file in the
-resulting output directory, called `missing_files.csv`.
+and identify the exact file names from that. It will only
+match to read files ending in either `fastq.gz` or `fq.gz`.
+If a file is not found, they will be reported in an output 
+file in the resulting output directory, called `missing_files.csv`.
 
+The resulting output directory will look like this:
+
+```
+project_experiment_YYYYMMDD
+|
+|- sampleid1_R1.fastq.gz
+|- sampleid1_R2.fastq.gz
+|- sampleid2_R1.fastq.gz
+|- sampleid2_R2.fastq.gz
+|- info.txt
+|- md5sums.txt
+|- (missing_files.csv)
+```
