@@ -5,6 +5,7 @@
 
 address=/nird/projects/NS9305K/SEQ-TECH/data_delivery/
 dest=/cluster/shared/vetinst/datasets/wgs/${2}
+csv=$(realpath $1)
 
 # Checks
 ## Check for user-supplied parameters
@@ -51,9 +52,9 @@ else
 fi
 
 # Get number of samples and initiate variable for counting
-nsamples=$(wc -l < $1)
+nsamples=$(wc -l < $csv)
 nreads=$(($nsamples*2))
-echo "Identified" $nsamples "samples with" $nreads "readfiles"
+echo "Identified" $nsamples "samples."
 loopcount=0
 
 # Transfer files
@@ -78,7 +79,7 @@ do
             ((loopcount++))
         done
     fi
-done < $1
+done < $csv
 
 # Check if all files were identified
 if [[ $loopcount == $nreads ]]; then
@@ -93,4 +94,4 @@ user=$(whoami)
 echo "Created by" $user "on" $time > info.txt
 echo "Project:" $project >> info.txt
 echo "Experiment:" $experiment >> info.txt
-cp $1 reads.csv
+cp $csv reads.csv
