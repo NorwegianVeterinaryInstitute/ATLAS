@@ -72,6 +72,7 @@ do
             tar -xf ${address}${tarball} $i
             mv $i .
             chmod 444 $(basename $i)
+            md5sum $(basename $i) >> md5sums.txt
             rm -rf ${tarball%.tar}
             # Increment loopcount for each file found
             ((loopcount++))
