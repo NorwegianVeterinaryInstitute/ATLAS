@@ -104,12 +104,14 @@ if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal, transfer complete!"
 else
     echo "Error: Checksums not equal. Please check files manually."
+    rm -f ${output}/${exp_dir}.tar.gz
     exit 1
 fi
 
 # --------------------------------------------------
 # Cleanup and logging
 echo "Performing cleanup..."
+chmod 444 ${output}/${exp_dir}.tar.gz
 rm -f ${fullpath}.tar.gz
 rm -rf ${fullpath}
 
