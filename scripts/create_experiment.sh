@@ -44,7 +44,7 @@ mkdir $exp
 cp $readme ${exp}/README.txt
 cp ${exp_data}/info.txt ${exp}/data_info.txt
 cp ${exp_data}/reads.csv ${exp}
-cp ${exp_data}/md5sums.txt ${exp}
+cp ${exp_data}/sha512sums.txt ${exp}
 
 echo "Creating symbolic links to read files..."
 mkdir ${exp}/data
