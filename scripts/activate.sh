@@ -96,5 +96,4 @@ echo "Project:" $project >> info.txt
 echo "Experiment:" $experiment >> info.txt
 cp $csv reads.csv
 
-echo "You may now create an experiment with the create_experiment.sh script."
-echo "bash create_experiment.sh <projNumber_projName>" $2
+echo "Data activated!"

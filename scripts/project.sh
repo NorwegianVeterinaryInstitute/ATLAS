@@ -37,7 +37,7 @@ fi
 # Create project directory and subfiles
 echo "Creating project directory and populating files..."
 mkdir $dest
-echo "Created by" $user "on" $time > ${dest}/creation.txt
+echo "Created by $user on $time" > ${dest}/creation.txt
 cp $readme $dest/README.txt
 echo "Done! Project" $proj_name "created in" $dest "."
 echo "Please fill out the README.txt file in the project directory."
