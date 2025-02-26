@@ -75,7 +75,11 @@ echo "Reconstituting experiment data..."
 bash /cluster/projects/nn9305k/development/dev/saga_scripts/scripts/activate.sh ${fullpath}/reads.csv ${exp_dir##exp_}
 
 echo "Comparing sha512sums..."
-test=$(grep -Fxvf ${exp_dir##exp_}/sha512sums.txt ${fullpath}/sha512sums.txt)
+test=$(grep -Fxvf ${data_dir}/${exp_dir##exp_}/sha512sums.txt ${fullpath}/sha512sums.txt)
+echo "test content: ${test}"
+echo "${data_dir}/${exp_dir##exp_}/sha512sums.txt"
+echo "${fullpath}/sha512sums.txt)"
+
 if [ ! -z "${test}" ]; then
     echo "sha512sums not equal, please check the following reads:"
     echo $test
