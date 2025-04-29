@@ -117,6 +117,7 @@ rm -rf ${fullpath}
 
 echo "Logging the transfer..."
 me=$(whoami)
+echo $study_dir "archived by" $me "on $(date)" >> ${proj_fullpath}/archive_log.txt
 echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/archive_log.txt
 
 echo "Archiving complete!"
