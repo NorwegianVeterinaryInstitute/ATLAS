@@ -82,7 +82,7 @@ fi
 
 # Log the stashing and cleanup
 echo "Logging the stashing and cleaning up files..."
-echo "Stashed by $me on $(date)" >> ${proj_fullpath}/stash_log.txt
+echo $study_dir "stashed by" $me "on $(date)" >> ${proj_fullpath}/stash_log.txt
 echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/stash_log.txt
 rm -rf ${fullpath}
 rm -f ${fullpath}.tar.gz

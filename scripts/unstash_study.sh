@@ -64,6 +64,7 @@ echo "Unpacking study..."
 cd $proj_fullpath
 tar -xzf ${study_dir}.tar.gz
 echo "Unstashed by $me on $(date)" >> ${study_dir}/stash_log.txt
+echo $study_dir "unstashed by" $me "on $(date)" >> ${proj_fullpath}/stash_log.txt
 
 ## Cleanup
 rm -f ${input}/${study_dir}.tar.gz
