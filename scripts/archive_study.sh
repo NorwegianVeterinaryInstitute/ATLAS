@@ -2,25 +2,25 @@
 
 set -e
 
-# Script for archiving experiments.
+# Script for archiving studies.
 # The script will create a tarball of the
-# experiment directory, and transfer the
+# study directory, and transfer the
 # tarball to the correct location on NIRD.
 
 # --------------------------------------------------
 # Get input and set variables
-exp_dir=$1
+study_dir=$1
 proj_dir=$2
 proj_loc=/cluster/projects/nn9305k/development/projects
 proj_fullpath=${proj_loc}/${proj_dir}
-fullpath=${proj_loc}/${proj_dir}/${exp_dir}
-output=/nird/datalake/NS9305K/archive/experiment_archive
+fullpath=${proj_loc}/${proj_dir}/${study_dir}
+output=/nird/datalake/NS9305K/archive/study_archive
 
 # --------------------------------------------------
 # Checks
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
-    echo "Error: No experiment directory name provided."
+    echo "Error: No study directory name provided."
     exit 1
 fi
 
@@ -36,7 +36,7 @@ if ! test -d $proj_fullpath; then
 fi
 
 if ! test -d $fullpath; then
-    echo "Supplied experiment directory does not exist."
+    echo "Supplied study directory does not exist."
     exit 1
 fi
 
@@ -48,7 +48,7 @@ size_gb=$((size_mb / 1024))
 threshold=250
 
 if (( size_gb > threshold )); then
-    echo "Warning: Experiment directory '$exp_dir' is very large (~${size_gb}GB)."
+    echo "Warning: Experiment directory '$study_dir' is very large (~${size_gb}GB)."
     echo "Please consider removing additional redundant or intermediary files."
     read -p "Continue archiving anyway? (y/n): " response
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
@@ -59,14 +59,14 @@ fi
 
 ## Check if sandbox archive is removed
 if [[ -d "$fullpath/sandbox" ]]; then
-    echo "The sandbox directory is still present in the experiment."
+    echo "The sandbox directory is still present in the study."
     echo "Please delete it before archiving."
     exit 1
 fi
 
 ## Check if experiment exists in the archive
 if [[ -d ${output}/${exp_dir}.tar.gz ]]; then
-    echo "Experiment already archived. Please verify name of the experiment."
+    echo "Study already archived. Please verify name of the study."
     exit 1
 fi
 
@@ -98,25 +98,25 @@ rsync -avPW ${fullpath}.tar.gz $output
 # --------------------------------------------------
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."
-hash_post=$(sha512sum ${output}/${exp_dir}.tar.gz | awk '{print $1}')
+hash_post=$(sha512sum ${output}/${study_dir}.tar.gz | awk '{print $1}')
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal, transfer complete!"
 else
     echo "Error: Checksums not equal. Please check files manually."
-    rm -f ${output}/${exp_dir}.tar.gz
+    rm -f ${output}/${study_dir}.tar.gz
     exit 1
 fi
 
 # --------------------------------------------------
 # Cleanup and logging
 echo "Performing cleanup..."
-chmod 444 ${output}/${exp_dir}.tar.gz
+chmod 444 ${output}/${study_dir}.tar.gz
 rm -f ${fullpath}.tar.gz
 rm -rf ${fullpath}
 
 echo "Logging the transfer..."
 me=$(whoami)
-echo -e "$proj_dir\t$exp_dir\t$me\t$(date)" >> ${output}/archive_log.txt
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/archive_log.txt
 
 echo "Archiving complete!"

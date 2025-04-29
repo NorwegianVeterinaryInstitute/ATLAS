@@ -4,19 +4,19 @@ set -e
 
 # Script for unstashing experiments
 # Get input and set variables
-exp_dir=$1
+study_dir=$1
 proj_dir=$2
 me=$(whoami)
-input=/nird/datalake/NS9305K/archive/experiment_stash
+input=/nird/datalake/NS9305K/archive/study_stash
 proj_loc=/cluster/projects/nn9305k/development/projects
 proj_fullpath=${proj_loc}/${proj_dir}
-fullpath=${proj_loc}/${proj_dir}/${exp_dir}
+fullpath=${proj_loc}/${proj_dir}/${study_dir}
 data_dir=/cluster/shared/vetinst/datasets/wgs
 
 # Checks
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
-    echo "Error: No experiment directory name provided."
+    echo "Error: No study directory name provided."
     exit 1
 fi
 
@@ -33,7 +33,7 @@ fi
 
 ## Check if experiment exists in stash
 if [[ -d ${fullpath} ]]; then
-    echo "Experiment already unstashed. Please verify name of the experiment."
+    echo "Study already unstashed. Please verify name of the study."
     exit 1
 fi
 
@@ -42,10 +42,10 @@ echo "All checks passed, creating tarball and stashing..."
 echo "Unstashing tarball and transferring to Saga..."
 
 ## Get checksum before transfer
-hash_pre=$(sha512sum ${input}/${exp_dir}.tar.gz | awk '{print $1}')
+hash_pre=$(sha512sum ${input}/${study_dir}.tar.gz | awk '{print $1}')
 
 ## Transfer file
-rsync -avPW ${input}/${exp_dir}.tar.gz $proj_fullpath
+rsync -avPW ${input}/${study_dir}.tar.gz $proj_fullpath
 
 ## Verify checksum
 echo "Verifying checksum after transfer..."
@@ -60,22 +60,22 @@ else
 fi
 
 ## Unpack tarball
-echo "Unpacking experiment..."
+echo "Unpacking study..."
 cd $proj_fullpath
-tar -xzf ${exp_dir}.tar.gz
-echo "Unstashed by $me on $(date)" >> ${exp_dir}/stash_log.txt
+tar -xzf ${study_dir}.tar.gz
+echo "Unstashed by $me on $(date)" >> ${study_dir}/stash_log.txt
 
 ## Cleanup
-rm -f ${input}/${exp_dir}.tar.gz
-rm -f ${exp_dir}.tar.gz
-echo -e "$proj_dir\t$exp_dir\t$me\t$(date)" >> ${input}/unstash_log.txt
+rm -f ${input}/${study_dir}.tar.gz
+rm -f ${study_dir}.tar.gz
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/unstash_log.txt
 
-# Reconstitute experiment data
-echo "Reconstituting experiment data..."
-(bash /cluster/projects/nn9305k/development/dev/saga_scripts/scripts/activate.sh "${fullpath}/reads.csv" "${exp_dir##exp_}")
+# Reconstitute study data
+echo "Reconstituting study data..."
+(bash /cluster/projects/nn9305k/development/dev/saga_scripts/scripts/activate_data.sh "${fullpath}/reads.csv" "${study_dir##study_}")
 
 echo "Comparing sha512sums..."
-test=$( grep -Fxvf ${data_dir}/${exp_dir##exp_}/sha512sums.txt ${fullpath}/sha512sums.txt || true )
+test=$( grep -Fxvf ${data_dir}/${study_dir##study_}/sha512sums.txt ${fullpath}/sha512sums.txt || true )
 
 if [ ! -z "${test}" ]; then
     echo "sha512sums not equal, please check the following reads:"

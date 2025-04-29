@@ -25,7 +25,7 @@ regex='^([a-zA-Z0-9-]+)_([a-zA-Z0-9-]+)_([0-9]{8})$'
 
 if [[ "$2" =~ $regex ]]; then
     project="${BASH_REMATCH[1]}"
-    experiment="${BASH_REMATCH[2]}"
+    study="${BASH_REMATCH[2]}"
     date_part="${BASH_REMATCH[3]}"
 
     # Validate the extracted date
