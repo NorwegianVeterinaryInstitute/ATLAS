@@ -20,7 +20,7 @@ if [ -z "$2" ]; then
 fi
 
 ## Check for output directory name structure
-### Check for project_experiment_date
+### Check for project_study_date
 regex='^([a-zA-Z0-9-]+)_([a-zA-Z0-9-]+)_([0-9]{8})$'
 
 if [[ "$2" =~ $regex ]]; then
@@ -35,8 +35,8 @@ if [[ "$2" =~ $regex ]]; then
     fi
 else
     # This runs only if the regex didn't match at all
-    echo "Error: Input must follow the format project_experiment_date"
-    echo "No underscores '_' allowed in project or experiment name"
+    echo "Error: Input must follow the format project_study_date"
+    echo "No underscores '_' allowed in project or study name"
     echo "Date has to be exactly 8 digits in the YYYYMMDD format"
     exit 1
 fi
@@ -83,7 +83,7 @@ done < $csv
 
 # Check if all files were identified
 if [[ $loopcount == $nreads ]]; then
-    echo "All files transferred!"
+    echo "All files transferred."
 else
     echo "Missing files, please check output."
 fi
@@ -93,7 +93,7 @@ time=$(date)
 user=$(whoami)
 echo "Created by" $user "on" $time > info.txt
 echo "Project:" $project >> info.txt
-echo "Experiment:" $experiment >> info.txt
+echo "Study: study_$2" >> info.txt
 cp $csv reads.csv
 
 echo "Data activated!"
