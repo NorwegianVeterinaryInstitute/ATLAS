@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script used to generate experiment directories
+# Script used to generate study directories
 # under a specific project directory, connected
 # to the directory created with the activate script
 
@@ -18,9 +18,9 @@ fi
 
 ## Create dir variables
 dest=/cluster/projects/nn9305k/development/projects/${1}
-exp_data=/cluster/shared/vetinst/datasets/wgs/${2}
-exp=${dest}/exp_${2}
-readme=/cluster/projects/nn9305k/development/adm/templates/experiment_readme.txt
+study_data=/cluster/shared/vetinst/datasets/wgs/${2}
+study=${dest}/study_${2}
+readme=/cluster/projects/nn9305k/development/adm/templates/study_readme.txt
 
 ## Check if dirs exist
 if ! test -d $dest; then
@@ -28,32 +28,32 @@ if ! test -d $dest; then
     exit 1
 fi
 
-if ! test -d $exp_data; then
+if ! test -d $study_data; then
     echo "Supplied data directory does not exist."
     exit 1
 fi
 
-if test -d $exp; then
-    echo "Output experiment directory already exists."
+if test -d $study; then
+    echo "Output study directory already exists."
     exit 1
 fi
 
 # Create output dir and populate
 echo "Creating output directory and populating files..."
-mkdir $exp
-cp $readme ${exp}/README.txt
-cp ${exp_data}/info.txt ${exp}/data_info.txt
-cp ${exp_data}/reads.csv ${exp}
-cp ${exp_data}/sha512sums.txt ${exp}
+mkdir $study
+cp $readme ${study}/README.txt
+cp ${study_data}/info.txt ${study}/data_info.txt
+cp ${study_data}/reads.csv ${study}
+cp ${study_data}/sha512sums.txt ${study}
 
 echo "Creating symbolic links to read files..."
-mkdir ${exp}/data
-ln -s ${exp_data}/*fastq.gz ${exp}/data
+mkdir ${study}/data
+ln -s ${study_data}/*fastq.gz ${study}/data
 
 echo "Creating subdirectories..."
-mkdir ${exp}/sandbox
-mkdir ${exp}/results
-mkdir ${exp}/scripts
+mkdir ${study}/sandbox
+mkdir ${study}/results
+mkdir ${study}/scripts
 
-echo "Creation of experiment directory complete!"
+echo "Creation of study directory complete!"
 echo "Make sure to fill out the README.txt file in the output directory."
