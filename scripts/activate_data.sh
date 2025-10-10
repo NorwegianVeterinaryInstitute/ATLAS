@@ -52,7 +52,7 @@ else
 fi
 
 # Check tarball presence
-dos2unix $csv
+dos2unix -q $csv
 echo "Checking tarballs..."
 missing=0
 while IFS="," read -r name tarball
