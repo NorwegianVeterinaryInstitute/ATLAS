@@ -51,9 +51,28 @@ else
     cd $dest
 fi
 
+# Check tarball presence
+dos2unix $csv
+echo "Checking tarballs..."
+missing=0
+while IFS="," read -r name tarball
+do
+    tarpath="${address}${tarball}"
+    if [[ ! -f "$tarpath" ]]; then
+        echo "Error: Tarball not found: $tarpath"
+        echo "$name,$tarball" >> missing_tarballs.csv
+        missing=1
+    fi
+done < "$csv"
+
+if [[ $missing -eq 1 ]]; then
+    echo "One or more tarballs are missing. Please fix and rerun."
+    exit 1
+fi
+
+echo "All tarballs found. Starting transfer..."
 # Get number of samples and initiate variable for counting
 ## Set to unix format
-dos2unix $csv
 nsamples=$(wc -l < $csv)
 nreads=$(($nsamples*2))
 echo "Identified" $nsamples "samples."
