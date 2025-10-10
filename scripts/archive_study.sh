@@ -57,10 +57,25 @@ if (( size_gb > threshold )); then
     fi
 fi
 
+# Check for presence of specific directories
 ## Check if sandbox archive is removed
 if [[ -d "$fullpath/sandbox" ]]; then
     echo "The sandbox directory is still present in the study."
     echo "Please delete it before archiving."
+    exit 1
+fi
+
+if [[ ! -d "$fullpath/results" ]]; then
+    echo "The results directory is not present in the study."
+    echo "Please make sure to uphold the directory structure of studies."
+    echo "Stopping the archiving process."
+    exit 1
+fi
+
+if [[ ! -d "$fullpath/data" ]]; then
+    echo "The data directory is not present in the study."
+    echo "Please make sure to uphold the directory structure of studies."
+    echo "Stopping the archiving process."
     exit 1
 fi
 
