@@ -52,6 +52,8 @@ else
 fi
 
 # Get number of samples and initiate variable for counting
+## Set to unix format
+dos2unix $csv
 nsamples=$(wc -l < $csv)
 nreads=$(($nsamples*2))
 echo "Identified" $nsamples "samples."
