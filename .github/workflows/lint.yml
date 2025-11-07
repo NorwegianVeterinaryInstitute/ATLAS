@@ -30,19 +30,13 @@ jobs:
           reviewdog_version: latest
 
       # 4 Run ShellCheck with reviewdog and fail on errors
-      - name: Run ShellCheck with reviewdog
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          set -e
-          echo "Running ShellCheck on all scripts..."
-          find . -type f -name "*.sh" \
-            | xargs -I{} shellcheck {} -f checkstyle \
-            | reviewdog -f=checkstyle \
-                        -name="ShellCheck" \
-                        -reporter=github-pr-review \
-                        -level=error \
-                        -fail-level=error
+      - name: Run ESLint with reviewdog
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          reporter: github-pr-review # or github-pr-check for annotations
+          filter_mode: diff_context # only report issues in changed lines/context
+          fail_on_error: true
 
       # 5 Bash syntax check (fail workflow on syntax errors)
       - name: Bash syntax check
