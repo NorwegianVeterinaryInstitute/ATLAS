@@ -11,32 +11,40 @@ on:
 
 jobs:
   lint:
-    name: Lint Bash scripts with ShellCheck + Reviewdog
+    name: Lint Bash scripts with ShellCheck + Syntax Check
     runs-on: ubuntu-latest
 
     steps:
+      # 1️ Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️ Install ShellCheck
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      # 3️ Set up reviewdog
       - name: Set up reviewdog
         uses: reviewdog/action-setup@v1
         with:
           reviewdog_version: latest
 
-      - name: Install ShellCheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
-
-      - name: Run ShellCheck with reviewdog (PR annotations)
+      # 4️ Run ShellCheck with reviewdog (inline PR comments)
+      - name: Run ShellCheck with reviewdog
         env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GH_TOKEN }}
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Running ShellCheck with reviewdog..."
-          # Find all shell scripts and lint them
+          echo "Running ShellCheck..."
           find . -type f -name "*.sh" \
             | xargs -I{} shellcheck {} -f gcc \
             | reviewdog -f=golint -name="ShellCheck" -reporter=github-pr-review -level=warning
 
-      - name: Run bash syntax check
+      # 5️ Bash syntax check (fails workflow if syntax errors exist)
+      - name: Bash syntax check
         run: |
+          set -e  # stop on first failure
           echo "Running bash syntax checks..."
-          find . -type f -name "*.sh" -exec bash -n {} +
+          for script in $(find . -type f -name "*.sh"); do
+            echo "Checking syntax for $script"
+            bash -n "$script"
+          done
