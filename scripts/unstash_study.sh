@@ -31,6 +31,8 @@ if ! test -d $proj_fullpath; then
     exit 1
 fi
 
+echo $test
+
 ## Check if experiment exists in stash
 if [[ -d ${fullpath} ]]; then
     echo "Study already unstashed. Please verify name of the study."
