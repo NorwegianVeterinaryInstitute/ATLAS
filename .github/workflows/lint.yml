@@ -15,34 +15,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️ Checkout code
+      # 1️ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️ Install ShellCheck
+      # 2 Install ShellCheck
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
 
-      # 3️ Set up reviewdog
+      # 3 Set up reviewdog
       - name: Set up reviewdog
         uses: reviewdog/action-setup@v1
         with:
           reviewdog_version: latest
 
-      # 4️ Run ShellCheck with reviewdog (inline PR comments)
+      # 4 Run ShellCheck on all scripts and post inline comments
       - name: Run ShellCheck with reviewdog
         env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo "Running ShellCheck..."
+          set -e
+          echo "Running ShellCheck on all scripts..."
+          # Use checkstyle format so reviewdog can parse all lines
           find . -type f -name "*.sh" \
-            | xargs -I{} shellcheck {} -f gcc \
-            | reviewdog -f=golint -name="ShellCheck" -reporter=github-pr-review -level=warning
+            | xargs -I{} shellcheck {} -f checkstyle \
+            | reviewdog -f=checkstyle -name="ShellCheck" -reporter=github-pr-review -level=error
 
-      # 5️ Bash syntax check (fails workflow if syntax errors exist)
+      # 5 Bash syntax check (fail workflow on errors)
       - name: Bash syntax check
         run: |
-          set -e  # stop on first failure
+          set -e
           echo "Running bash syntax checks..."
           for script in $(find . -type f -name "*.sh"); do
             echo "Checking syntax for $script"
