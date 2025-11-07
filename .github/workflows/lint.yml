@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️ Checkout repository
+      # 1 Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -29,19 +29,22 @@ jobs:
         with:
           reviewdog_version: latest
 
-      # 4 Run ShellCheck on all scripts and post inline comments
+      # 4 Run ShellCheck with reviewdog and fail on errors
       - name: Run ShellCheck with reviewdog
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           set -e
           echo "Running ShellCheck on all scripts..."
-          # Use checkstyle format so reviewdog can parse all lines
           find . -type f -name "*.sh" \
             | xargs -I{} shellcheck {} -f checkstyle \
-            | reviewdog -f=checkstyle -name="ShellCheck" -reporter=github-pr-review -level=error
+            | reviewdog -f=checkstyle \
+                        -name="ShellCheck" \
+                        -reporter=github-pr-review \
+                        -level=error \
+                        -fail-on-error
 
-      # 5 Bash syntax check (fail workflow on errors)
+      # 5 Bash syntax check (fail workflow on syntax errors)
       - name: Bash syntax check
         run: |
           set -e
