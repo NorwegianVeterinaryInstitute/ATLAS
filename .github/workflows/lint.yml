@@ -42,7 +42,7 @@ jobs:
                         -name="ShellCheck" \
                         -reporter=github-pr-review \
                         -level=error \
-                        -fail-on-error
+                        -fail-level=error
 
       # 5 Bash syntax check (fail workflow on syntax errors)
       - name: Bash syntax check
