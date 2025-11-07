@@ -31,7 +31,7 @@ if ! test -d $proj_fullpath; then
     exit 1
 fi
 
-echo $test
+mkdir $dest
 
 ## Check if experiment exists in stash
 if [[ -d ${fullpath} ]]; then
