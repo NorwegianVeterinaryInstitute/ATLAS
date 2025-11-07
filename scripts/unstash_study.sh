@@ -35,7 +35,7 @@ fi
 if [[ -d ${fullpath} ]]; then
     echo "Study already unstashed. Please verify name of the study."
     exit 1
-fi
+
 
 # Unstash experiment
 echo "All checks passed, creating tarball and stashing..."
