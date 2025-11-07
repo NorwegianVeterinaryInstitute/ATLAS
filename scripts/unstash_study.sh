@@ -31,13 +31,11 @@ if ! test -d $proj_fullpath; then
     exit 1
 fi
 
-mkdir $dest
-
 ## Check if experiment exists in stash
 if [[ -d ${fullpath} ]]; then
     echo "Study already unstashed. Please verify name of the study."
     exit 1
-
+fi
 
 # Unstash experiment
 echo "All checks passed, creating tarball and stashing..."
@@ -89,3 +87,6 @@ else
 fi
 
 
+cp $UNDEFINED_VAR testfile.txt
+cat /dev/null | while read line; do echo $line; done
+for f in $UNDEFINED_VAR; do echo $f; done
