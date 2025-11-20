@@ -22,7 +22,6 @@ jobs:
       # 2 Install dependencies
       - name: Install dependencies
         run: npm install
-        working-directory: ./ATLAS
 
       # 2 Install ShellCheck
       - name: Install ShellCheck
