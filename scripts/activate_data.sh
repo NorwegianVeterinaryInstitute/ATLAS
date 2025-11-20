@@ -43,11 +43,6 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     show_help
 fi
 
-# Get input and set variables
-csv=$(realpath $1)
-dest=/cluster/shared/vetinst/active_data/${2}
-
-# Checks
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
     echo "Error: No input csv provided."
@@ -60,6 +55,10 @@ if [ -z "$2" ]; then
     echo "Use -h or --help for usage information."
     exit 1
 fi
+
+# Get input and set variables
+csv=$(realpath $1)
+dest=/cluster/shared/vetinst/active_data/${2}
 
 ## Check for output directory name structure
 ### Check for project_study_date
