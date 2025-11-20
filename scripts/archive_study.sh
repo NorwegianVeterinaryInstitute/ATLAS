@@ -28,7 +28,7 @@ DESCRIPTION:
     - Verifies the tarball integrity
     - Transfers the archive to NIRD (/nird/datalake/NS9305K/study_archive)
     - Verifies checksums before and after transfer
-    - Removes the original study directory after successful archiving
+    - Removes the original study and data directories after successful archiving
     - Logs the archiving operation
 
 REQUIREMENTS:
