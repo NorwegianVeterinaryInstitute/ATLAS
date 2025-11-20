@@ -57,6 +57,7 @@ proj_dir=$2
 proj_loc=/cluster/projects/nn9305k/projects
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
+data_dir=/cluster/shared/vetinst/active_data
 output=/nird/datalake/NS9305K/study_archive
 
 # --------------------------------------------------
@@ -174,6 +175,7 @@ echo "Performing cleanup..."
 chmod 444 ${output}/${study_dir}.tar.gz
 rm -f ${fullpath}.tar.gz
 rm -rf ${fullpath}
+rm -rf ${data_dir}/${study_dir##study_}
 
 echo "Logging the transfer..."
 me=$(whoami)
