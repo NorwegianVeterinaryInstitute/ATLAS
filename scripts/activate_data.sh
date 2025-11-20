@@ -29,6 +29,11 @@ DESCRIPTION:
     - Date must be a valid date
 
     CSV format: sample_name,/path/to/tarball.tar
+    
+    The CSV file can contain:
+    - Quoted or unquoted fields: sample1,/path/to/tarball.tar OR "sample1","/path/to/tarball.tar"
+    - Multiple tarballs per line: "sample1","/path/to/tarball1.tar,/path/to/tarball2.tar"
+    - Empty lines: "",""
 
 EXAMPLE:
     activate_data.sh samples.csv MyProj_Study1_20231120
