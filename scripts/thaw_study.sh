@@ -2,12 +2,12 @@
 
 set -e
 
-# Script for unstashing experiments
+# Script for thawing studies
 # Get input and set variables
 study_dir=$1
 proj_dir=$2
 me=$(whoami)
-input=/nird/datalake/NS9305K/archive/study_stash
+input=/nird/datalake/NS9305K/archive/study_freezer
 proj_loc=/cluster/projects/nn9305k/development/projects
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
@@ -31,15 +31,15 @@ if ! test -d $proj_fullpath; then
     exit 1
 fi
 
-## Check if experiment exists in stash
+## Check if study exists in freezer
 if [[ -d ${fullpath} ]]; then
-    echo "Study already unstashed. Please verify name of the study."
+    echo "Study already thawed. Please verify name of the study."
     exit 1
 fi
 
-# Unstash experiment
-echo "All checks passed, creating tarball and stashing..."
-echo "Unstashing tarball and transferring to Saga..."
+# Thaw study
+echo "All checks passed, creating tarball and thawing..."
+echo "Unthawing tarball and transferring to Saga..."
 
 ## Get checksum before transfer
 hash_pre=$(sha512sum ${input}/${study_dir}.tar.gz | awk '{print $1}')
@@ -63,13 +63,13 @@ fi
 echo "Unpacking study..."
 cd $proj_fullpath
 tar -xzf ${study_dir}.tar.gz
-echo "Unstashed by $me on $(date)" >> ${study_dir}/stash_log.txt
-echo $study_dir "unstashed by" $me "on $(date)" >> ${proj_fullpath}/stash_log.txt
+echo "Thawed by $me on $(date)" >> ${study_dir}/freeze_log.txt
+echo $study_dir "thawed by" $me "on $(date)" >> ${proj_fullpath}/freeze_log.txt
 
 ## Cleanup
 rm -f ${input}/${study_dir}.tar.gz
 rm -f ${study_dir}.tar.gz
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/unstash_log.txt
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/freeze_log.txt
 
 # Reconstitute study data
 echo "Reconstituting study data..."
@@ -83,10 +83,5 @@ if [ ! -z "${test}" ]; then
     echo $test
     exit 1
 else
-    echo "sha512sum equal, unstashing done!"
+    echo "sha512sum equal, thawing done!"
 fi
-
-
-cp $UNDEFINED_VAR testfile.txt
-cat /dev/null | while read line; do echo $line; done
-for f in $UNDEFINED_VAR; do echo $f; done

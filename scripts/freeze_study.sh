@@ -2,7 +2,7 @@
 
 set -e
 
-# Script for stashing studies
+# Script for freezing studies
 # Get input and set variables
 study_dir=$1
 proj_dir=$2
@@ -37,15 +37,15 @@ if ! test -d $fullpath; then
     exit 1
 fi
 
-## Check if study exists in stash
+## Check if study exists in freezer
 if [[ -d ${output}/${study_dir}.tar.gz ]]; then
-    echo "Study already stashed. Please verify name of the study."
+    echo "Study already frozen. Please verify name of the study."
     exit 1
 fi
 
 # Create study tarball
-echo "All checks passed, creating tarball and stashing..."
-echo "Stashed by $me on $(date)" >> ${fullpath}/stash_log.txt
+echo "All checks passed, creating tarball and freezing..."
+echo "Frozen by $me on $(date)" >> ${fullpath}/stash_log.txt
 
 cd $proj_fullpath
 tar -czf ${study_dir}.tar.gz $study_dir
@@ -80,12 +80,12 @@ else
     exit 1
 fi
 
-# Log the stashing and cleanup
-echo "Logging the stashing and cleaning up files..."
-echo $study_dir "stashed by" $me "on $(date)" >> ${proj_fullpath}/stash_log.txt
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/stash_log.txt
+# Log the freezing and cleanup
+echo "Logging the freezing and cleaning up files..."
+echo $study_dir "frozen by" $me "on $(date)" >> ${proj_fullpath}/freeze_log.txt
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/freeze_log.txt
 rm -rf ${fullpath}
 rm -f ${fullpath}.tar.gz
 rm -rf ${data_dir}/${study_dir##study_}
 
-echo "Stashing complete!"
+echo "Freezing complete!"
