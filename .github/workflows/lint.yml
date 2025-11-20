@@ -18,12 +18,6 @@ jobs:
       # 1 Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      # 2 Install dependencies
-      - name: Install dependencies
-        run: 
-          npm init
-          npm install
 
       # 2 Install ShellCheck
       - name: Install ShellCheck
