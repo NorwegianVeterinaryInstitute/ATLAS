@@ -21,7 +21,9 @@ jobs:
       
       # 2 Install dependencies
       - name: Install dependencies
-        run: npm install
+        run: 
+          npm init
+          npm install
 
       # 2 Install ShellCheck
       - name: Install ShellCheck
