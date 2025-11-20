@@ -3,21 +3,62 @@
 ## Script used to transfer data from NIRD to
 ## /cluster/shared/vetinst/active_data
 
-# Get input and set variables
-csv=$(realpath $1)
-dest=/cluster/shared/vetinst/active_data/${2}
+# Help function
+show_help() {
+    cat << EOF
+Usage: activate_data.sh INPUT_CSV OUTPUT_DIR
+
+Transfer data from NIRD to /cluster/shared/vetinst/active_data.
+
+ARGUMENTS:
+    INPUT_CSV      Path to CSV file containing sample names and tarball paths
+    OUTPUT_DIR     Output directory name in format: project_study_YYYYMMDD
+
+DESCRIPTION:
+    This script performs the following operations:
+    - Validates the CSV file and checks for tarball presence
+    - Creates the output directory at /cluster/shared/vetinst/active_data/OUTPUT_DIR
+    - Extracts FASTQ files from tarballs specified in the CSV
+    - Sets files to read-only (chmod 444)
+    - Generates SHA512 checksums for all files
+    - Creates metadata files (info.txt, reads.csv)
+
+    The output directory name must follow the format: project_study_YYYYMMDD
+    - No underscores allowed in project or study name parts
+    - Date must be exactly 8 digits in YYYYMMDD format
+    - Date must be a valid date
+
+    CSV format: sample_name,/path/to/tarball.tar
+
+EXAMPLE:
+    activate_data.sh samples.csv MyProj_Study1_20231120
+
+EOF
+    exit 0
+}
 
 # Checks
+## Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
     echo "Error: No input csv provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
 if [ -z "$2" ]; then
     echo "Error: No output directory provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
+
+# Get input and set variables
+csv=$(realpath $1)
+dest=/cluster/shared/vetinst/active_data/${2}
 
 ## Check for output directory name structure
 ### Check for project_study_date

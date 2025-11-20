@@ -4,15 +4,51 @@
 # under a specific project directory, connected
 # to the directory created with the activate script
 
+# Help function
+show_help() {
+    cat << EOF
+Usage: create_study.sh PROJECT_DIR DATA_DIR
+
+Generate study directories under a specific project directory, connected
+to the directory created with the activate script.
+
+ARGUMENTS:
+    PROJECT_DIR    Name of the project directory
+    DATA_DIR       Name of the data directory
+
+DESCRIPTION:
+    This script creates a study directory structure with the following:
+    - Study directory at /cluster/projects/nn9305k/projects/PROJECT_DIR/study_DATA_DIR
+    - README.txt file
+    - data_info.txt (copied from active_data)
+    - reads.csv (copied from active_data)
+    - sha512sums.txt (copied from active_data)
+    - Symbolic links to FASTQ files in data/ subdirectory
+    - Subdirectories: sandbox, results, scripts
+
+EXAMPLE:
+    create_study.sh myproject mydata_study_20231120
+
+EOF
+    exit 0
+}
+
 # Checks
+## Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
     echo "Error: No project directory name provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
 if [ -z "$2" ]; then
     echo "Error: No data directory provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
