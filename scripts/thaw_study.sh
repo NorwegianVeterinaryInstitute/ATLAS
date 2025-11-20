@@ -3,6 +3,44 @@
 set -e
 
 # Script for thawing studies
+
+# Help function
+show_help() {
+    cat << EOF
+Usage: thaw_study.sh STUDY_DIR PROJECT_DIR
+
+Thaw (restore) a frozen study from NIRD freezer storage.
+
+ARGUMENTS:
+    STUDY_DIR      Name of the study directory to thaw
+    PROJECT_DIR    Name of the project directory to restore the study to
+
+DESCRIPTION:
+    This script performs the following operations:
+    - Retrieves a frozen study from NIRD freezer (/nird/datapeak/NS9305K/study_freezer)
+    - Verifies checksums before and after transfer
+    - Unpacks the tarball to restore the study directory
+    - Reconstitutes the study data using activate_data.sh
+    - Verifies sha512sums of the restored data
+    - Removes the tarball from freezer after successful restoration
+    - Logs the thawing operation
+
+    This script is used to restore studies that were previously frozen
+    using the freeze_study.sh script.
+
+EXAMPLE:
+    thaw_study.sh study_mydata_20231120 myproject
+
+EOF
+    exit 0
+}
+
+# Checks
+## Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
 # Get input and set variables
 study_dir=$1
 proj_dir=$2
@@ -17,11 +55,13 @@ data_dir=/cluster/shared/vetinst/active_data
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
     echo "Error: No study directory name provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
 if [ -z "$2" ]; then
     echo "Error: No project directory name provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
