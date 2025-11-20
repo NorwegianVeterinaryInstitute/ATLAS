@@ -11,10 +11,10 @@ set -e
 # Get input and set variables
 study_dir=$1
 proj_dir=$2
-proj_loc=/cluster/projects/nn9305k/development/projects
+proj_loc=/cluster/projects/nn9305k/projects
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
-output=/nird/datalake/NS9305K/archive/study_archive
+output=/nird/datalake/NS9305K/study_archive
 
 # --------------------------------------------------
 # Checks

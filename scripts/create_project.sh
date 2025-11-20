@@ -5,7 +5,7 @@
 
 # Fetch variables
 proj_name=$1
-dest=/cluster/projects/nn9305k/development/projects/${proj_name}
+dest=/cluster/projects/nn9305k/projects/${proj_name}
 readme=/cluster/projects/nn9305k/development/adm/templates/project_readme.txt
 
 # Checks

@@ -17,8 +17,8 @@ if [ -z "$2" ]; then
 fi
 
 ## Create dir variables
-dest=/cluster/projects/nn9305k/development/projects/${1}
-study_data=/cluster/shared/vetinst/datasets/wgs/${2}
+dest=/cluster/projects/nn9305k/projects/${1}
+study_data=/cluster/shared/vetinst/active_data/${2}
 study=${dest}/study_${2}
 readme=/cluster/projects/nn9305k/development/adm/templates/study_readme.txt
 

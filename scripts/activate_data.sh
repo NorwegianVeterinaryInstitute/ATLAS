@@ -1,11 +1,11 @@
 #!/bin/bash
 
 ## Script used to transfer data from NIRD to
-## /cluster/shared/vetinst/data/wgs
+## /cluster/shared/vetinst/active_data
 
-address=/nird/projects/NS9305K/SEQ-TECH/data_delivery/
-dest=/cluster/shared/vetinst/datasets/wgs/${2}
+# Get input and set variables
 csv=$(realpath $1)
+dest=/cluster/shared/vetinst/active_data/${2}
 
 # Checks
 ## Check for user-supplied parameters
@@ -57,7 +57,7 @@ echo "Checking tarballs..."
 missing=0
 while IFS="," read -r name tarball
 do
-    tarpath="${address}${tarball}"
+    tarpath="${tarball}"
     if [[ ! -f "$tarpath" ]]; then
         echo "Error: Tarball not found: $tarpath"
         echo "$name,$tarball" >> missing_tarballs.csv
@@ -83,15 +83,15 @@ echo "Transferring files..."
 while IFS="," read -r name tarball
 do
     # Check to see if the file is present in the tarball
-    test=$(tar -tvf ${address}${tarball} | grep $name; echo $?;)
+    test=$(tar -tvf ${tarball} | grep $name; echo $?;)
     if [[ $test == 1 ]]; then
         # Output filenames that are missing
         echo "$name,$tarball" >> missing_samples.csv
     else
-        filenames=$(tar -tvf ${address}${tarball} | grep $name | grep -e 'fastq.gz$' -e "fq.gz$" | awk '{print $6}')
+        filenames=$(tar -tvf ${tarball} | grep $name | grep -e 'fastq.gz$' -e "fq.gz$" | awk '{print $6}')
         for i in $filenames;
         do
-            tar -xf ${address}${tarball} $i
+            tar -xf ${tarball} $i
             mv $i .
             chmod 444 $(basename $i)
             sha512sum $(basename $i) >> sha512sums.txt
