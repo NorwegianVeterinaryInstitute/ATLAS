@@ -7,6 +7,49 @@ set -e
 # study directory, and transfer the
 # tarball to the correct location on NIRD.
 
+# Help function
+show_help() {
+    cat << EOF
+Usage: archive_study.sh STUDY_DIR PROJECT_DIR
+
+Archive a study by creating a tarball and transferring it to NIRD storage.
+
+ARGUMENTS:
+    STUDY_DIR      Name of the study directory to archive
+    PROJECT_DIR    Name of the project directory containing the study
+
+DESCRIPTION:
+    This script performs the following operations:
+    - Checks if the study directory exists and meets requirements
+    - Warns if directory size exceeds 250GB
+    - Verifies that sandbox directory has been removed
+    - Verifies that results and data directories are present
+    - Creates a tarball of the study directory
+    - Verifies the tarball integrity
+    - Transfers the archive to NIRD (/nird/datalake/NS9305K/study_archive)
+    - Verifies checksums before and after transfer
+    - Removes the original study directory after successful archiving
+    - Logs the archiving operation
+
+REQUIREMENTS:
+    - Sandbox directory must be removed before archiving
+    - Results directory must be present
+    - Data directory must be present
+
+EXAMPLE:
+    archive_study.sh study_mydata_20231120 myproject
+
+EOF
+    exit 0
+}
+
+# --------------------------------------------------
+# Checks
+## Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
 # --------------------------------------------------
 # Get input and set variables
 study_dir=$1
@@ -21,11 +64,13 @@ output=/nird/datalake/NS9305K/study_archive
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
     echo "Error: No study directory name provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
 if [ -z "$2" ]; then
     echo "Error: No project directory name provided."
+    echo "Use -h or --help for usage information."
     exit 1
 fi
 
