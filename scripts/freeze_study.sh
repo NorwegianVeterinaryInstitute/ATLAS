@@ -7,11 +7,11 @@ set -e
 study_dir=$1
 proj_dir=$2
 me=$(whoami)
-output=/nird/datalake/NS9305K/archive/study_stash
-proj_loc=/cluster/projects/nn9305k/development/projects
+output=/nird/datapeak/NS9305K/study_freezer
+proj_loc=/cluster/projects/nn9305k/projects
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=/cluster/shared/vetinst/datasets/wgs
+data_dir=/cluster/shared/vetinst/active_data
 
 # Checks
 ## Check for user-supplied parameters
