@@ -109,7 +109,7 @@ echo $study_dir "thawed by" $me "on $(date)" >> ${proj_fullpath}/freeze_log.txt
 ## Cleanup
 rm -f ${input}/${study_dir}.tar.gz
 rm -f ${study_dir}.tar.gz
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/freeze_log.txt
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/thaw_log.txt
 
 # Reconstitute study data
 echo "Reconstituting study data..."
