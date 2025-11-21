@@ -87,16 +87,6 @@ else
     exit 1
 fi
 
-## Check if destination dir exists
-if test -d "$dest"; then
-    echo "Output directory already exists. Please choose a different name."
-    exit 1
-else
-    echo "Creating output directory"
-    mkdir "$dest"
-    cd "$dest" || exit
-fi
-
 # Function to strip quotes from a string
 strip_quotes() {
     local str="$1"
@@ -110,7 +100,7 @@ strip_quotes() {
 dos2unix -q "$csv"
 echo "Checking tarballs..."
 missing=0
-expected_readsets=0
+expected_reads=0
 
 while IFS="," read -r name tarball
 do
@@ -138,10 +128,10 @@ do
             # Count expected read sets from this tarball for this sample
             # Each sample typically has R1 and R2 files
             count=$(tar -tvf "$tarpath" 2>/dev/null | grep -c "$name.*\(fastq\.gz\|fq\.gz\)$" || echo 0)
-            expected_readsets=$((expected_readsets + count))
+            expected_reads=$((expected_reads + count))
         fi
     done
-done < "$csv"
+done < <(tail -n +2 "$csv")
 
 if [[ $missing -eq 1 ]]; then
     echo "One or more tarballs are missing. Please fix and rerun."
@@ -149,8 +139,18 @@ if [[ $missing -eq 1 ]]; then
 fi
 
 echo "All tarballs found. Starting transfer..."
-echo "Expected read sets: $expected_readsets"
+echo "Expected reads: $expected_reads"
 loopcount=0
+
+## Check if destination dir exists
+if test -d "$dest"; then
+    echo "Output directory already exists. Please choose a different name."
+    exit 1
+else
+    echo "Creating output directory"
+    mkdir "$dest"
+    cd "$dest" || exit
+fi
 
 # Transfer files
 echo "Transferring files..."
@@ -185,7 +185,8 @@ do
                 mv "$i" .
                 chmod 444 "$(basename "$i")"
                 sha512sum "$(basename "$i")" >> sha512sums.txt
-                rm -rf "${tarpath%.tar}"
+                tarball_name=$(basename "$tarpath")
+                rm -rf "${dest}/${tarball_name%.tar}"
                 # Increment loopcount for each file found
                 ((loopcount++))
             done
@@ -207,13 +208,13 @@ do
             fi
         done
     fi
-done < "$csv"
+done < <(tail -n +2 "$csv")
 
 # Check if all files were identified
-if [[ $loopcount -eq $expected_readsets ]]; then
+if [[ $loopcount -eq $expected_reads ]]; then
     echo "All files transferred."
 else
-    echo "Warning: Expected $expected_readsets read sets, but found $loopcount"
+    echo "Warning: Expected $expected_reads reads, but found $loopcount"
     echo "Please check output for missing files."
 fi
 
