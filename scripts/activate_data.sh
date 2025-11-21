@@ -186,7 +186,7 @@ do
                 chmod 444 "$(basename "$i")"
                 sha512sum "$(basename "$i")" >> sha512sums.txt
                 tarball_name=$(basename "$tarpath")
-                rm -rf "${dest}/${tarball_name%.tar}"
+                rm -rf "${dest:?}/${tarball_name%.tar}"
                 # Increment loopcount for each file found
                 ((loopcount++))
             done
