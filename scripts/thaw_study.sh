@@ -79,7 +79,7 @@ fi
 
 # Thaw study
 echo "All checks passed, creating tarball and thawing..."
-echo "Unthawing tarball and transferring to Saga..."
+echo "Thawing tarball and transferring to Saga..."
 
 ## Get checksum before transfer
 hash_pre=$(sha512sum ${input}/${study_dir}.tar.gz | awk '{print $1}')
