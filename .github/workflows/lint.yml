@@ -11,6 +11,7 @@ on:
 
 jobs:
   lint:
+    if: ${{ !startsWith(github.head_ref, 'release-please') }}
     name: Lint Bash scripts with ShellCheck + Syntax Check
     runs-on: ubuntu-latest
 
