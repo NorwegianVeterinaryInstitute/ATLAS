@@ -8,14 +8,14 @@ show_help() {
     cat << EOF
 Usage: create_project.sh PROJECT_NAME
 
-Create a project directory in the nn9305k/projects directory.
+Create a project directory in the ${PROJ_DIR} directory.
 
 ARGUMENTS:
     PROJECT_NAME   Name of the project in format: projectNumber_projectName
 
 DESCRIPTION:
     This script creates a new project directory with the following:
-    - Project directory at /cluster/projects/nn9305k/projects/PROJECT_NAME
+    - Project directory at ${PROJ_DIR}/PROJECT_NAME
     - creation.txt file with timestamp and creator information
     - README.txt template file
 
@@ -38,9 +38,19 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 # Fetch variables
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+source "$CONFIG_FILE"
+
 proj_name=$1
-dest=/cluster/projects/nn9305k/projects/${proj_name}
-readme=/cluster/projects/nn9305k/development/adm/templates/project_readme.txt
+dest=${PROJ_DIR}/${proj_name}
+readme=${TEMPLATE_DIR}/project_readme.txt
 
 # Checks
 ## Check for user-supplied parameters

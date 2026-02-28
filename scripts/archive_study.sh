@@ -43,24 +43,32 @@ EOF
     exit 0
 }
 
-# --------------------------------------------------
 # Checks
 ## Check for help flag
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     show_help
 fi
 
-# --------------------------------------------------
+
 # Get input and set variables
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+source "$CONFIG_FILE"
+
 study_dir=$1
 proj_dir=$2
-proj_loc=/cluster/projects/nn9305k/projects
+proj_loc=${PROJ_DIR}
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=/cluster/shared/vetinst/active_data
-output=/nird/datalake/NS9305K/study_archive
+data_dir=${ACTIVE_DATA_DIR}
+output=${ARCHIVE_DIR}
 
-# --------------------------------------------------
 # Checks
 ## Check for user-supplied parameters
 if [ -z "$1" ]; then
@@ -91,7 +99,7 @@ size_kb=$(du -s "$fullpath" | awk '{print $1}')
 size_mb=$((size_kb / 1024))
 size_gb=$((size_mb / 1024))
 
-threshold=250
+threshold=${ARCHIVE_SIZE_THRESHOLD_GB:-250}
 
 if (( size_gb > threshold )); then
     echo "Warning: Experiment directory '$study_dir' is very large (~${size_gb}GB)."
@@ -126,12 +134,11 @@ if [[ ! -d "$fullpath/data" ]]; then
 fi
 
 ## Check if experiment exists in the archive
-if [[ -d ${output}/${exp_dir}.tar.gz ]]; then
+if [[ -d ${output}/${study_dir}.tar.gz ]]; then
     echo "Study already archived. Please verify name of the study."
     exit 1
 fi
 
-# --------------------------------------------------
 # Create experiment tarball
 echo "All checks passed, creating tarball..."
 tar -czf ${fullpath}.tar.gz $fullpath
@@ -146,17 +153,14 @@ else
     exit 1
 fi
 
-# --------------------------------------------------
 # Get checksum of archive
 echo "Creating checksum of archive..."
 hash_pre=$(sha512sum ${fullpath}.tar.gz | awk '{print $1}')
 
-# --------------------------------------------------
 # Transfer tarball to storage
 echo "Moving archive to NIRD..."
 rsync -avPW ${fullpath}.tar.gz $output
 
-# --------------------------------------------------
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."
 hash_post=$(sha512sum ${output}/${study_dir}.tar.gz | awk '{print $1}')
@@ -169,7 +173,6 @@ else
     exit 1
 fi
 
-# --------------------------------------------------
 # Cleanup and logging
 echo "Performing cleanup..."
 chmod 444 ${output}/${study_dir}.tar.gz

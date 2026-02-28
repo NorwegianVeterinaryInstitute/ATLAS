@@ -9,7 +9,7 @@ show_help() {
     cat << EOF
 Usage: freeze_study.sh STUDY_DIR PROJECT_DIR
 
-Freeze a study by creating a tarball and transferring it to NIRD freezer.
+Freeze a study by creating a tarball and transferring it to the freeze directory.
 
 ARGUMENTS:
     STUDY_DIR      Name of the study directory to freeze
@@ -20,7 +20,7 @@ DESCRIPTION:
     - Checks if the study directory exists
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
-    - Transfers the archive to NIRD study freezer (/nird/datapeak/NS9305K/study_freezer)
+    - Transfers the archive to the freeze directory (${FREEZE_DIR})
     - Verifies checksums before and after transfer
     - Removes the original study directory and associated active data
     - Logs the freezing operation
@@ -41,14 +41,24 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 # Get input and set variables
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+source "$CONFIG_FILE"
+
 study_dir=$1
 proj_dir=$2
 me=$(whoami)
-output=/nird/datapeak/NS9305K/study_freezer
-proj_loc=/cluster/projects/nn9305k/projects
+output=${FREEZE_DIR}
+proj_loc=${PROJ_DIR}
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=/cluster/shared/vetinst/active_data
+data_dir=${ACTIVE_DATA_DIR}
 
 # Checks
 ## Check for user-supplied parameters
@@ -104,8 +114,21 @@ echo "Creating checksum of archive..."
 hash_pre=$(sha512sum ${study_dir}.tar.gz | awk '{print $1}')
 
 # Transfer tarball to storage
-echo "Moving archive to NIRD..."
-rsync -avPW ${study_dir}.tar.gz $output
+echo "Moving archive to freeze directory..."
+
+rsync_err_file="$(mktemp)"
+rsync -avPW ${study_dir}.tar.gz $output 2> "$rsync_err_file"
+
+status=$?
+
+if (( status != 0 )); then
+    echo "rsync failed with exit code $status" >&2
+    cat "$rsync_err_file" >&2
+    rm -f "$rsync_err_file"
+    exit "$status"
+fi
+
+rm -f "$rsync_err_file"
 
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."

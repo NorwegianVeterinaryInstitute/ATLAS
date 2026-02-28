@@ -18,7 +18,7 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script creates a study directory structure with the following:
-    - Study directory at /cluster/projects/nn9305k/projects/PROJECT_DIR/study_DATA_DIR
+    - Study directory at ${PROJECT_DIR}/study_DATA_DIR
     - README.txt file
     - data_info.txt (copied from active_data)
     - reads.csv (copied from active_data)
@@ -53,10 +53,20 @@ if [ -z "$2" ]; then
 fi
 
 ## Create dir variables
-dest=/cluster/projects/nn9305k/projects/${1}
-study_data=/cluster/shared/vetinst/active_data/${2}
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+source "$CONFIG_FILE"
+
+dest=${PROJ_DIR}/${1}
+study_data=${ACTIVE_DATA_DIR}/${2}
 study=${dest}/study_${2}
-readme=/cluster/projects/nn9305k/development/adm/templates/study_readme.txt
+readme=${TEMPLATE_DIR}/study_readme.txt
 
 ## Check if dirs exist
 if ! test -d $dest; then

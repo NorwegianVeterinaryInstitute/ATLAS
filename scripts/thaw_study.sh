@@ -9,7 +9,7 @@ show_help() {
     cat << EOF
 Usage: thaw_study.sh STUDY_DIR PROJECT_DIR
 
-Thaw (restore) a frozen study from NIRD freezer storage.
+Thaw (restore) a frozen study from freezer storage.
 
 ARGUMENTS:
     STUDY_DIR      Name of the study directory to thaw
@@ -17,7 +17,7 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script performs the following operations:
-    - Retrieves a frozen study from NIRD freezer (/nird/datapeak/NS9305K/study_freezer)
+    - Retrieves a frozen study from the freeze directory (${FREEZE_DIR})
     - Verifies checksums before and after transfer
     - Unpacks the tarball to restore the study directory
     - Reconstitutes the study data using activate_data.sh
@@ -35,6 +35,9 @@ EOF
     exit 0
 }
 
+# Get script dir
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 # Checks
 ## Check for help flag
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
@@ -42,14 +45,24 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 # Get input and set variables
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+source "$CONFIG_FILE"
+
 study_dir=$1
 proj_dir=$2
 me=$(whoami)
-input=/nird/datapeak/NS9305K/study_freezer
-proj_loc=/cluster/projects/nn9305k/projects
+input=${FREEZE_DIR}
+proj_loc=${PROJ_DIR}
 proj_fullpath=${proj_loc}/${proj_dir}
 fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=/cluster/shared/vetinst/active_data
+data_dir=${ACTIVE_DATA_DIR}
 
 # Checks
 ## Check for user-supplied parameters
@@ -113,7 +126,7 @@ echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/thaw_log.txt
 
 # Reconstitute study data
 echo "Reconstituting study data..."
-(bash /cluster/projects/nn9305k/development/dev/saga_scripts/scripts/activate_data.sh "${fullpath}/reads.csv" "${study_dir##study_}")
+(bash ${SCRIPT_DIR}/activate_data.sh "${fullpath}/reads.csv" "${study_dir##study_}")
 
 echo "Comparing sha512sums..."
 test=$( grep -Fxvf ${data_dir}/${study_dir##study_}/sha512sums.txt ${fullpath}/sha512sums.txt || true )
