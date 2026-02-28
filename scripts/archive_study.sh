@@ -159,7 +159,18 @@ hash_pre=$(sha512sum ${fullpath}.tar.gz | awk '{print $1}')
 
 # Transfer tarball to storage
 echo "Moving archive to NIRD..."
-rsync -avPW ${fullpath}.tar.gz $output
+rsync_err_file="$(mktemp)"
+
+if rsync -avPW ${fullpath}.tar.gz $output 2> "$rsync_err_file"; then
+    rm -f "$rsync_err_file"
+else
+    status=$?
+    echo "rsync failed with exit code $status" >&2
+    echo "rsync error output:" >&2
+    cat "$rsync_err_file" >&2
+    rm -f "$rsync_err_file"
+    exit "$status"
+fi
 
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."

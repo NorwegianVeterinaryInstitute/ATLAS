@@ -117,18 +117,17 @@ hash_pre=$(sha512sum ${study_dir}.tar.gz | awk '{print $1}')
 echo "Moving archive to freeze directory..."
 
 rsync_err_file="$(mktemp)"
-rsync -avPW ${study_dir}.tar.gz $output 2> "$rsync_err_file"
 
-status=$?
-
-if (( status != 0 )); then
+if rsync -avPW ${study_dir}.tar.gz $output 2> "$rsync_err_file"; then
+    rm -f "$rsync_err_file"
+else
+    status=$?
     echo "rsync failed with exit code $status" >&2
+    echo "rsync error output:" >&2
     cat "$rsync_err_file" >&2
     rm -f "$rsync_err_file"
     exit "$status"
 fi
-
-rm -f "$rsync_err_file"
 
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."

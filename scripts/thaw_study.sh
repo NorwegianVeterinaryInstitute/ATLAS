@@ -98,7 +98,18 @@ echo "Thawing tarball and transferring to Saga..."
 hash_pre=$(sha512sum ${input}/${study_dir}.tar.gz | awk '{print $1}')
 
 ## Transfer file
-rsync -avPW ${input}/${study_dir}.tar.gz $proj_fullpath
+rsync_err_file="$(mktemp)"
+
+if rsync -avPW ${input}/${study_dir}.tar.gz $proj_fullpath 2> "$rsync_err_file"; then
+    rm -f "$rsync_err_file"
+else
+    status=$?
+    echo "rsync failed with exit code $status" >&2
+    echo "rsync error output:" >&2
+    cat "$rsync_err_file" >&2
+    rm -f "$rsync_err_file"
+    exit "$status"
+fi
 
 ## Verify checksum
 echo "Verifying checksum after transfer..."
