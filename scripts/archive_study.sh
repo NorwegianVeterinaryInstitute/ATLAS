@@ -162,7 +162,7 @@ hash_pre="$(sha512sum "${fullpath}.tar.gz" | awk '{print $1}')"
 echo "Moving archive to NIRD..."
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW ${fullpath}.tar.gz $output 2> "$rsync_err_file"; then
+if rsync -avPW "${fullpath}.tar.gz" "$output" 2> "$rsync_err_file"; then
     rm -f "$rsync_err_file"
 else
     status=$?
