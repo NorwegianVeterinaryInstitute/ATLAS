@@ -74,7 +74,7 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 source "$CONFIG_FILE"
 
 csv=$(realpath "$1")
-dest=${ACTIVE_DATA_DIR}/${2}
+dest="${ACTIVE_DATA_DIR}/${2}"
 
 ## Check for output directory name structure
 ### Check for project_study_date

@@ -62,13 +62,13 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir=$1
-proj_dir=$2
-proj_loc=${PROJ_DIR}
-proj_fullpath=${proj_loc}/${proj_dir}
-fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=${ACTIVE_DATA_DIR}
-output=${ARCHIVE_DIR}
+study_dir="$1"
+proj_dir="$2"
+proj_loc="${PROJ_DIR}"
+proj_fullpath="${proj_loc}/${proj_dir}"
+fullpath="${proj_loc}/${proj_dir}/${study_dir}"
+data_dir="${ACTIVE_DATA_DIR}"
+output="${ARCHIVE_DIR}"
 
 # Checks
 ## Check for user-supplied parameters
@@ -100,7 +100,7 @@ size_kb=$(du -s "$fullpath" | awk '{print $1}')
 size_mb=$((size_kb / 1024))
 size_gb=$((size_mb / 1024))
 
-threshold=${ARCHIVE_SIZE_THRESHOLD_GB:-250}
+threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
 
 if (( size_gb > threshold )); then
     echo "Warning: Experiment directory '$study_dir' is very large (~${size_gb}GB)."
@@ -142,7 +142,7 @@ fi
 
 # Create experiment tarball
 echo "All checks passed, creating tarball..."
-tar -czf ${fullpath}.tar.gz $fullpath
+tar -czf "${fullpath}.tar.gz" "$fullpath"
 
 # Verify tarball archive
 echo "Verifying archive..."
@@ -150,13 +150,13 @@ if tar -tzf ${fullpath}.tar.gz > /dev/null; then
     echo "Archive verification successful!"
 else
     echo "Error: Archive verification failed. Deleting corrupt archive."
-    rm -f ${fullpath}.tar.gz
+    rm -f "${fullpath}.tar.gz"
     exit 1
 fi
 
 # Get checksum of archive
 echo "Creating checksum of archive..."
-hash_pre=$(sha512sum ${fullpath}.tar.gz | awk '{print $1}')
+hash_pre="$(sha512sum "${fullpath}.tar.gz" | awk '{print $1}')"
 
 # Transfer tarball to storage
 echo "Moving archive to NIRD..."
@@ -175,26 +175,26 @@ fi
 
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."
-hash_post=$(sha512sum ${output}/${study_dir}.tar.gz | awk '{print $1}')
+hash_post="$(sha512sum "${output}/${study_dir}.tar.gz" | awk '{print $1}')"
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal, transfer complete!"
 else
     echo "Error: Checksums not equal. Please check files manually."
-    rm -f ${output}/${study_dir}.tar.gz
+    rm -f "${output}/${study_dir}.tar.gz"
     exit 1
 fi
 
 # Cleanup and logging
 echo "Performing cleanup..."
-chmod 444 ${output}/${study_dir}.tar.gz
-rm -f ${fullpath}.tar.gz
-rm -rf ${fullpath}
-rm -rf ${data_dir}/${study_dir##study_}
+chmod 444 "${output}/${study_dir}.tar.gz"
+rm -f "${fullpath}.tar.gz"
+rm -rf "${fullpath}"
+rm -rf "${data_dir}/${study_dir##study_}"
 
 echo "Logging the transfer..."
 me=$(whoami)
-echo $study_dir "archived by" $me "on $(date)" >> ${proj_fullpath}/archive_log.txt
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/archive_log.txt
+echo "$study_dir archived by $me on $(date)" >> "${proj_fullpath}/archive_log.txt"
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${output}/archive_log.txt"
 
 echo "Archiving complete!"

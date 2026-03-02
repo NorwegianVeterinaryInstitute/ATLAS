@@ -56,14 +56,14 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir=$1
-proj_dir=$2
+study_dir="$1"
+proj_dir="$2"
 me=$(whoami)
-input=${FREEZE_DIR}
-proj_loc=${PROJ_DIR}
-proj_fullpath=${proj_loc}/${proj_dir}
-fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=${ACTIVE_DATA_DIR}
+input="${FREEZE_DIR}"
+proj_loc="${PROJ_DIR}"
+proj_fullpath="${proj_loc}/${proj_dir}"
+fullpath="${proj_loc}/${proj_dir}/${study_dir}"
+data_dir="${ACTIVE_DATA_DIR}"
 
 # Checks
 ## Check for user-supplied parameters
@@ -126,22 +126,22 @@ fi
 
 ## Unpack tarball
 echo "Unpacking study..."
-cd $proj_fullpath
-tar -xzf ${study_dir}.tar.gz
-echo "Thawed by $me on $(date)" >> ${study_dir}/freeze_log.txt
-echo $study_dir "thawed by" $me "on $(date)" >> ${proj_fullpath}/freeze_log.txt
+cd "$proj_fullpath"
+tar -xzf "${study_dir}.tar.gz"
+echo "Thawed by $me on $(date)" >> "${study_dir}/freeze_log.txt"
+echo "$study_dir thawed by $me on $(date)" >> "${proj_fullpath}/freeze_log.txt"
 
 ## Cleanup
-rm -f ${input}/${study_dir}.tar.gz
-rm -f ${study_dir}.tar.gz
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${input}/thaw_log.txt
+rm -f "${input}/${study_dir}.tar.gz"
+rm -f "${study_dir}.tar.gz"
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${input}/thaw_log.txt"
 
 # Reconstitute study data
 echo "Reconstituting study data..."
-(bash ${SCRIPT_DIR}/activate_data.sh "${fullpath}/reads.csv" "${study_dir##study_}")
+(bash "${SCRIPT_DIR}/activate_data.sh" "${fullpath}/reads.csv" "${study_dir##study_}")
 
 echo "Comparing sha512sums..."
-test=$( grep -Fxvf ${data_dir}/${study_dir##study_}/sha512sums.txt ${fullpath}/sha512sums.txt || true )
+test=$( grep -Fxvf "${data_dir}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
 
 if [ ! -z "${test}" ]; then
     echo "sha512sums not equal, please check the following reads:"

@@ -52,14 +52,14 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir=$1
-proj_dir=$2
+study_dir="$1"
+proj_dir="$2"
 me=$(whoami)
-output=${FREEZE_DIR}
-proj_loc=${PROJ_DIR}
-proj_fullpath=${proj_loc}/${proj_dir}
-fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=${ACTIVE_DATA_DIR}
+output="${FREEZE_DIR}"
+proj_loc="${PROJ_DIR}"
+proj_fullpath="${proj_loc}/${proj_dir}"
+fullpath="${proj_loc}/${proj_dir}/${study_dir}"
+data_dir="${ACTIVE_DATA_DIR}"
 
 # Checks
 ## Check for user-supplied parameters
@@ -95,10 +95,10 @@ fi
 
 # Create study tarball
 echo "All checks passed, creating tarball and freezing..."
-echo "Frozen by $me on $(date)" >> ${fullpath}/stash_log.txt
+echo "Frozen by $me on $(date)" >> "${fullpath}/stash_log.txt"
 
-cd $proj_fullpath
-tar -czf ${study_dir}.tar.gz $study_dir
+cd "$proj_fullpath"
+tar -czf "${study_dir}.tar.gz" "$study_dir"
 
 # Verify tarball archive
 echo "Verifying archive..."
@@ -106,7 +106,7 @@ if tar -tzf ${study_dir}.tar.gz > /dev/null; then
     echo "Archive verification successful!"
 else
     echo "Error: Archive verification failed. Deleting corrupt archive."
-    rm -f ${study_dir}.tar.gz
+    rm -f "${study_dir}.tar.gz"
     exit 1
 fi
 
@@ -144,10 +144,10 @@ fi
 
 # Log the freezing and cleanup
 echo "Logging the freezing and cleaning up files..."
-echo $study_dir "frozen by" $me "on $(date)" >> ${proj_fullpath}/freeze_log.txt
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/freeze_log.txt
-rm -rf ${fullpath}
-rm -f ${fullpath}.tar.gz
-rm -rf ${data_dir}/${study_dir##study_}
+echo "$study_dir frozen by $me on $(date)" >> "${proj_fullpath}/freeze_log.txt"
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${output}/freeze_log.txt"
+rm -rf "${fullpath}"
+rm -f "${fullpath}.tar.gz"
+rm -rf "${data_dir}/${study_dir##study_}"
 
 echo "Freezing complete!"

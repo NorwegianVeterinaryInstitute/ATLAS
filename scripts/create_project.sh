@@ -50,8 +50,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 source "$CONFIG_FILE"
 
 proj_name=$1
-dest=${PROJ_DIR}/${proj_name}
-readme=${TEMPLATE_DIR}/project_readme.txt
+dest="${PROJ_DIR}/${proj_name}"
+readme="${TEMPLATE_DIR}/project_readme.txt"
 
 # Checks
 ## Check for user-supplied parameters
@@ -82,9 +82,9 @@ fi
 
 # Create project directory and subfiles
 echo "Creating project directory and populating files..."
-mkdir $dest
+mkdir "$dest"
 user=$(whoami)
-echo "Created by" $user "on $(date)" > ${dest}/creation.txt
-cp $readme $dest/README.txt
-echo "Project" $proj_name "created in" $dest"."
+echo "Created by $user on $(date)" > "${dest}/creation.txt"
+cp "$readme" "${dest}/README.txt"
+echo "Project $proj_name created in $dest."
 echo "Please fill out the README.txt file in the project directory."

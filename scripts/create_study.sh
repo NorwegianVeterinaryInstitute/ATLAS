@@ -64,10 +64,10 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-dest=${PROJ_DIR}/${1}
-study_data=${ACTIVE_DATA_DIR}/${2}
-study=${dest}/study_${2}
-readme=${TEMPLATE_DIR}/study_readme.txt
+dest="${PROJ_DIR}/${1}"
+study_data="${ACTIVE_DATA_DIR}/${2}"
+study="${dest}/study_${2}"
+readme="${TEMPLATE_DIR}/study_readme.txt"
 
 ## Check if dirs exist
 if ! test -d $dest; then
@@ -87,20 +87,20 @@ fi
 
 # Create output dir and populate
 echo "Creating output directory and populating files..."
-mkdir $study
-cp $readme ${study}/README.txt
-cp ${study_data}/info.txt ${study}/data_info.txt
-cp ${study_data}/reads.csv ${study}
-cp ${study_data}/sha512sums.txt ${study}
+mkdir "$study"
+cp "$readme" "${study}/README.txt"
+cp "${study_data}/info.txt" "${study}/data_info.txt"
+cp "${study_data}/reads.csv" "${study}"
+cp "${study_data}/sha512sums.txt" "${study}"
 
 echo "Creating symbolic links to read files..."
-mkdir ${study}/data
-ln -s ${study_data}/*fastq.gz ${study}/data
+mkdir "${study}/data"
+ln -s "${study_data}"/*fastq.gz "${study}/data"
 
 echo "Creating subdirectories..."
-mkdir ${study}/sandbox
-mkdir ${study}/results
-mkdir ${study}/scripts
+mkdir "${study}/sandbox"
+mkdir "${study}/results"
+mkdir "${study}/scripts"
 
 echo "Creation of study directory complete!"
 echo "Make sure to fill out the README.txt file in the output directory."
