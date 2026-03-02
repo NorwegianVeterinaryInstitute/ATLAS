@@ -8,7 +8,7 @@ show_help() {
     cat << EOF
 Usage: activate_data.sh INPUT_CSV OUTPUT_DIR
 
-Transfer data from NIRD to /cluster/shared/vetinst/active_data.
+Transfer data from tarball path to ${ACTIVE_DATA_DIR}.
 
 ARGUMENTS:
     INPUT_CSV      Path to CSV file containing sample names and tarball paths
@@ -17,7 +17,7 @@ ARGUMENTS:
 DESCRIPTION:
     This script performs the following operations:
     - Validates the CSV file and checks for tarball presence
-    - Creates the output directory at /cluster/shared/vetinst/active_data/OUTPUT_DIR
+    - Creates the output directory at ${ACTIVE_DATA_DIR}/OUTPUT_DIR
     - Extracts FASTQ files from tarballs specified in the CSV
     - Sets files to read-only (chmod 444)
     - Generates SHA512 checksums for all files
@@ -49,21 +49,32 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No input csv provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
-if [ -z "$2" ]; then
+if [[ -z "$2" ]]; then
     echo "Error: No output directory provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
 # Get input and set variables
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+# shellcheck source=/dev/null
+source "$CONFIG_FILE"
+
 csv=$(realpath "$1")
-dest=/cluster/shared/vetinst/active_data/${2}
+dest="${ACTIVE_DATA_DIR}/${2}"
 
 ## Check for output directory name structure
 ### Check for project_study_date
@@ -133,7 +144,7 @@ do
     done
 done < <(tail -n +2 "$csv")
 
-if [[ $missing -eq 1 ]]; then
+if [[ "$missing" -eq 1 ]]; then
     echo "One or more tarballs are missing. Please fix and rerun."
     exit 1
 fi
@@ -143,7 +154,7 @@ echo "Expected reads: $expected_reads"
 loopcount=0
 
 ## Check if destination dir exists
-if test -d "$dest"; then
+if [[ -d "$dest" ]]; then
     echo "Output directory already exists. Please choose a different name."
     exit 1
 else

@@ -8,14 +8,14 @@ show_help() {
     cat << EOF
 Usage: create_project.sh PROJECT_NAME
 
-Create a project directory in the nn9305k/projects directory.
+Create a project directory in the ${PROJ_DIR} directory.
 
 ARGUMENTS:
     PROJECT_NAME   Name of the project in format: projectNumber_projectName
 
 DESCRIPTION:
     This script creates a new project directory with the following:
-    - Project directory at /cluster/projects/nn9305k/projects/PROJECT_NAME
+    - Project directory at ${PROJ_DIR}/PROJECT_NAME
     - creation.txt file with timestamp and creator information
     - README.txt template file
 
@@ -38,13 +38,24 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 # Fetch variables
-proj_name=$1
-dest=/cluster/projects/nn9305k/projects/${proj_name}
-readme=/cluster/projects/nn9305k/development/adm/templates/project_readme.txt
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+# shellcheck source=/dev/null
+source "$CONFIG_FILE"
+
+proj_name="$1"
+dest="${PROJ_DIR}/${proj_name}"
+readme="${TEMPLATE_DIR}/project_readme.txt"
 
 # Checks
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No project name supplied."
     echo "Use -h or --help for usage information."
     exit 1
@@ -64,16 +75,16 @@ else
 fi
 
 ## Check if destination dir exists
-if test -d $dest; then
+if [[ -d "$dest" ]]; then
     echo "Output directory already exists. Please choose a different name."
     exit 1
 fi
 
 # Create project directory and subfiles
 echo "Creating project directory and populating files..."
-mkdir $dest
+mkdir "$dest"
 user=$(whoami)
-echo "Created by" $user "on $(date)" > ${dest}/creation.txt
-cp $readme $dest/README.txt
-echo "Project" $proj_name "created in" $dest"."
+echo "Created by $user on $(date)" > "${dest}/creation.txt"
+cp "$readme" "${dest}/README.txt"
+echo "Project $proj_name created in $dest."
 echo "Please fill out the README.txt file in the project directory."

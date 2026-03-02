@@ -43,45 +43,54 @@ EOF
     exit 0
 }
 
-# --------------------------------------------------
 # Checks
 ## Check for help flag
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
     show_help
 fi
 
-# --------------------------------------------------
-# Get input and set variables
-study_dir=$1
-proj_dir=$2
-proj_loc=/cluster/projects/nn9305k/projects
-proj_fullpath=${proj_loc}/${proj_dir}
-fullpath=${proj_loc}/${proj_dir}/${study_dir}
-data_dir=/cluster/shared/vetinst/active_data
-output=/nird/datalake/NS9305K/study_archive
 
-# --------------------------------------------------
+# Get input and set variables
+## Get config variables
+CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+    echo "Config not found: $CONFIG_FILE" >&2
+    exit 1
+}
+
+# shellcheck source=/dev/null
+source "$CONFIG_FILE"
+
+study_dir="$1"
+proj_dir="$2"
+proj_loc="${PROJ_DIR}"
+proj_fullpath="${proj_loc}/${proj_dir}"
+fullpath="${proj_loc}/${proj_dir}/${study_dir}"
+data_dir="${ACTIVE_DATA_DIR}"
+output="${ARCHIVE_DIR}"
+
 # Checks
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No study directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
-if [ -z "$2" ]; then
+if [[ -z "$2" ]]; then
     echo "Error: No project directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
 ## Check if dirs exist
-if ! test -d $proj_fullpath; then
+if [[ ! -d "$proj_fullpath" ]]; then
     echo "Supplied project directory does not exist."
     exit 1
 fi
 
-if ! test -d $fullpath; then
+if [[ ! -d "$fullpath" ]]; then
     echo "Supplied study directory does not exist."
     exit 1
 fi
@@ -91,7 +100,7 @@ size_kb=$(du -s "$fullpath" | awk '{print $1}')
 size_mb=$((size_kb / 1024))
 size_gb=$((size_mb / 1024))
 
-threshold=250
+threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
 
 if (( size_gb > threshold )); then
     echo "Warning: Experiment directory '$study_dir' is very large (~${size_gb}GB)."
@@ -126,15 +135,14 @@ if [[ ! -d "$fullpath/data" ]]; then
 fi
 
 ## Check if experiment exists in the archive
-if [[ -d ${output}/${exp_dir}.tar.gz ]]; then
+if [[ -d "${output}/${study_dir}.tar.gz" ]]; then
     echo "Study already archived. Please verify name of the study."
     exit 1
 fi
 
-# --------------------------------------------------
 # Create experiment tarball
 echo "All checks passed, creating tarball..."
-tar -czf ${fullpath}.tar.gz $fullpath
+tar -czf "${fullpath}.tar.gz" "$fullpath"
 
 # Verify tarball archive
 echo "Verifying archive..."
@@ -142,44 +150,51 @@ if tar -tzf ${fullpath}.tar.gz > /dev/null; then
     echo "Archive verification successful!"
 else
     echo "Error: Archive verification failed. Deleting corrupt archive."
-    rm -f ${fullpath}.tar.gz
+    rm -f "${fullpath}.tar.gz"
     exit 1
 fi
 
-# --------------------------------------------------
 # Get checksum of archive
 echo "Creating checksum of archive..."
-hash_pre=$(sha512sum ${fullpath}.tar.gz | awk '{print $1}')
+hash_pre="$(sha512sum "${fullpath}.tar.gz" | awk '{print $1}')"
 
-# --------------------------------------------------
 # Transfer tarball to storage
 echo "Moving archive to NIRD..."
-rsync -avPW ${fullpath}.tar.gz $output
+rsync_err_file="$(mktemp)"
 
-# --------------------------------------------------
+if rsync -avPW "${fullpath}.tar.gz" "$output" 2> "$rsync_err_file"; then
+    rm -f "$rsync_err_file"
+else
+    status=$?
+    echo "rsync failed with exit code $status" >&2
+    echo "rsync error output:" >&2
+    cat "$rsync_err_file" >&2
+    rm -f "$rsync_err_file"
+    exit "$status"
+fi
+
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."
-hash_post=$(sha512sum ${output}/${study_dir}.tar.gz | awk '{print $1}')
+hash_post="$(sha512sum "${output}/${study_dir}.tar.gz" | awk '{print $1}')"
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal, transfer complete!"
 else
     echo "Error: Checksums not equal. Please check files manually."
-    rm -f ${output}/${study_dir}.tar.gz
+    rm -f "${output}/${study_dir}.tar.gz"
     exit 1
 fi
 
-# --------------------------------------------------
 # Cleanup and logging
 echo "Performing cleanup..."
-chmod 444 ${output}/${study_dir}.tar.gz
-rm -f ${fullpath}.tar.gz
-rm -rf ${fullpath}
-rm -rf ${data_dir}/${study_dir##study_}
+chmod 444 "${output:?}/${study_dir}.tar.gz"
+rm -f "${fullpath:?}.tar.gz"
+rm -rf "${fullpath:?}"
+rm -rf "${data_dir:?}/${study_dir##study_}"
 
 echo "Logging the transfer..."
 me=$(whoami)
-echo $study_dir "archived by" $me "on $(date)" >> ${proj_fullpath}/archive_log.txt
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> ${output}/archive_log.txt
+echo "$study_dir archived by $me on $(date)" >> "${proj_fullpath}/archive_log.txt"
+echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${output}/archive_log.txt"
 
 echo "Archiving complete!"
