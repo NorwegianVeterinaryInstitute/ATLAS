@@ -40,13 +40,13 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No project directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
-if [ -z "$2" ]; then
+if [[ -z "$2" ]]; then
     echo "Error: No data directory provided."
     echo "Use -h or --help for usage information."
     exit 1
@@ -70,17 +70,17 @@ study="${dest}/study_${2}"
 readme="${TEMPLATE_DIR}/study_readme.txt"
 
 ## Check if dirs exist
-if ! test -d $dest; then
+if [[ ! -d "$dest" ]]; then
     echo "Supplied project directory does not exist."
     exit 1
 fi
 
-if ! test -d $study_data; then
+if [[ ! -d "$study_data" ]]; then
     echo "Supplied data directory does not exist."
     exit 1
 fi
 
-if test -d $study; then
+if [[ -d "$study" ]]; then
     echo "Output study directory already exists."
     exit 1
 fi

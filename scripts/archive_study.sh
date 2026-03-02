@@ -72,25 +72,25 @@ output="${ARCHIVE_DIR}"
 
 # Checks
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No study directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
-if [ -z "$2" ]; then
+if [[ -z "$2" ]]; then
     echo "Error: No project directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
 ## Check if dirs exist
-if ! test -d $proj_fullpath; then
+if [[ ! -d "$proj_fullpath" ]]; then
     echo "Supplied project directory does not exist."
     exit 1
 fi
 
-if ! test -d $fullpath; then
+if [[ ! -d "$fullpath" ]]; then
     echo "Supplied study directory does not exist."
     exit 1
 fi
@@ -135,7 +135,7 @@ if [[ ! -d "$fullpath/data" ]]; then
 fi
 
 ## Check if experiment exists in the archive
-if [[ -d ${output}/${study_dir}.tar.gz ]]; then
+if [[ -d "${output}/${study_dir}.tar.gz" ]]; then
     echo "Study already archived. Please verify name of the study."
     exit 1
 fi
@@ -187,10 +187,10 @@ fi
 
 # Cleanup and logging
 echo "Performing cleanup..."
-chmod 444 "${output}/${study_dir}.tar.gz"
-rm -f "${fullpath}.tar.gz"
-rm -rf "${fullpath}"
-rm -rf "${data_dir}/${study_dir##study_}"
+chmod 444 "${output:?}/${study_dir}.tar.gz"
+rm -f "${fullpath:?}.tar.gz"
+rm -rf "${fullpath:?}"
+rm -rf "${data_dir:?}/${study_dir##study_}"
 
 echo "Logging the transfer..."
 me=$(whoami)

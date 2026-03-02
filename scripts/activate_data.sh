@@ -49,13 +49,13 @@ if [[ "$1" == "-h" || "$1" == "--help" ]]; then
 fi
 
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No input csv provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
-if [ -z "$2" ]; then
+if [[ -z "$2" ]]; then
     echo "Error: No output directory provided."
     echo "Use -h or --help for usage information."
     exit 1
@@ -144,7 +144,7 @@ do
     done
 done < <(tail -n +2 "$csv")
 
-if [[ $missing -eq 1 ]]; then
+if [[ "$missing" -eq 1 ]]; then
     echo "One or more tarballs are missing. Please fix and rerun."
     exit 1
 fi
@@ -154,7 +154,7 @@ echo "Expected reads: $expected_reads"
 loopcount=0
 
 ## Check if destination dir exists
-if test -d "$dest"; then
+if [[ -d "$dest" ]]; then
     echo "Output directory already exists. Please choose a different name."
     exit 1
 else

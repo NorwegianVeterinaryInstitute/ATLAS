@@ -49,13 +49,13 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-proj_name=$1
+proj_name="$1"
 dest="${PROJ_DIR}/${proj_name}"
 readme="${TEMPLATE_DIR}/project_readme.txt"
 
 # Checks
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No project name supplied."
     echo "Use -h or --help for usage information."
     exit 1
@@ -75,7 +75,7 @@ else
 fi
 
 ## Check if destination dir exists
-if test -d $dest; then
+if [[ -d "$dest" ]]; then
     echo "Output directory already exists. Please choose a different name."
     exit 1
 fi

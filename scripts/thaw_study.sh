@@ -67,26 +67,26 @@ data_dir="${ACTIVE_DATA_DIR}"
 
 # Checks
 ## Check for user-supplied parameters
-if [ -z "$1" ]; then
+if [[ -z "$1" ]]; then
     echo "Error: No study directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
-if [ -z "$2" ]; then
+if [[ -z "$2" ]]; then
     echo "Error: No project directory name provided."
     echo "Use -h or --help for usage information."
     exit 1
 fi
 
 ## Check if dirs exist
-if ! test -d $proj_fullpath; then
+if [[ ! -d "$proj_fullpath" ]]; then
     echo "Supplied project directory does not exist."
     exit 1
 fi
 
 ## Check if study exists in freezer
-if [[ -d ${fullpath} ]]; then
+if [[ -d "$fullpath" ]]; then
     echo "Study already thawed. Please verify name of the study."
     exit 1
 fi
@@ -96,12 +96,12 @@ echo "All checks passed, creating tarball and thawing..."
 echo "Thawing tarball and transferring to Saga..."
 
 ## Get checksum before transfer
-hash_pre=$(sha512sum ${input}/${study_dir}.tar.gz | awk '{print $1}')
+hash_pre=$(sha512sum "${input}/${study_dir}.tar.gz" | awk '{print $1}')
 
 ## Transfer file
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW ${input}/${study_dir}.tar.gz $proj_fullpath 2> "$rsync_err_file"; then
+if rsync -avPW "${input}/${study_dir}.tar.gz" "$proj_fullpath" 2> "$rsync_err_file"; then
     rm -f "$rsync_err_file"
 else
     status=$?
@@ -114,13 +114,13 @@ fi
 
 ## Verify checksum
 echo "Verifying checksum after transfer..."
-hash_post=$(sha512sum ${fullpath}.tar.gz | awk '{print $1}')
+hash_post=$(sha512sum "${fullpath}.tar.gz" | awk '{print $1}')
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal, transfer complete!"
 else
     echo "Error: Checksums not equal. Please check files manually."
-    rm -f ${fullpath}.tar.gz
+    rm -f "${fullpath:?}.tar.gz"
     exit 1
 fi
 
@@ -132,8 +132,8 @@ echo "Thawed by $me on $(date)" >> "${study_dir}/freeze_log.txt"
 echo "$study_dir thawed by $me on $(date)" >> "${proj_fullpath}/freeze_log.txt"
 
 ## Cleanup
-rm -f "${input}/${study_dir}.tar.gz"
-rm -f "${study_dir}.tar.gz"
+rm -f "${input:?}/${study_dir}.tar.gz"
+rm -f "${study_dir:?}.tar.gz"
 echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${input}/thaw_log.txt"
 
 # Reconstitute study data
@@ -143,9 +143,9 @@ echo "Reconstituting study data..."
 echo "Comparing sha512sums..."
 test=$( grep -Fxvf "${data_dir}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
 
-if [ ! -z "${test}" ]; then
+if [[ ! -z "${test}" ]]; then
     echo "sha512sums not equal, please check the following reads:"
-    echo $test
+    echo "$test"
     exit 1
 else
     echo "sha512sum equal, thawing done!"
