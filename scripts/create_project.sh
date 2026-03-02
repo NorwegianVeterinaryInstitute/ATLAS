@@ -46,6 +46,7 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
     exit 1
 }
 
+# shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
 proj_name=$1
