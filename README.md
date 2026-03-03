@@ -1,4 +1,4 @@
-![GitHub release](https://img.shields.io/github/v/release/NorwegianVeterinaryInstitute/ATLAS?display_name=release&color=%238dd3c7)
+![GitHub release](https://img.shields.io/github/v/release/NorwegianVeterinaryInstitute/ATLAS)
 
 <p align="center"><img src="img/atlas_logo.png" alt="ATLAS" width="600"></p>
 
