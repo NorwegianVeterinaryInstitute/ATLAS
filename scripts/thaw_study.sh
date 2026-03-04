@@ -40,9 +40,42 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 # Checks
 ## Check for help flag
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
+show_help=false
+
+while getopts ":hp:s:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        s)
+            study_dir="$OPTARG"
+            ;;
+        p)
+            proj_dir="$OPTARG"
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Check for missing flags
+if [[ -z "$study_dir" ]]; then
+    echo "Error: Missing required argument -s (study directory name)." >&2
+    exit 1
 fi
+
+if [[ -z "$proj_dir" ]]; then
+    echo "Error: Missing required argument -p (project directory name)." >&2
+    exit 1
+fi
+
 
 # Get input and set variables
 ## Get config variables
@@ -56,8 +89,6 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir="$1"
-proj_dir="$2"
 me=$(whoami)
 input="${FREEZE_DIR}"
 proj_loc="${PROJ_DIR}"
@@ -66,19 +97,6 @@ fullpath="${proj_loc}/${proj_dir}/${study_dir}"
 data_dir="${ACTIVE_DATA_DIR}"
 
 # Checks
-## Check for user-supplied parameters
-if [[ -z "$1" ]]; then
-    echo "Error: No study directory name provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
-if [[ -z "$2" ]]; then
-    echo "Error: No project directory name provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
 ## Check if dirs exist
 if [[ ! -d "$proj_fullpath" ]]; then
     echo "Supplied project directory does not exist."

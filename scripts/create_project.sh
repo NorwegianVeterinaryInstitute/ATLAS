@@ -6,12 +6,13 @@
 # Help function
 show_help() {
     cat << EOF
-Usage: create_project.sh PROJECT_NAME
+Usage: create_project.sh -p PROJECT_NAME
 
 Create a project directory in the ${PROJ_DIR} directory.
 
 ARGUMENTS:
-    PROJECT_NAME   Name of the project in format: projectNumber_projectName
+    -p PROJECT_NAME   Name of the project in format: projectNumber_projectName
+    -h                Show this help message
 
 DESCRIPTION:
     This script creates a new project directory with the following:
@@ -33,8 +34,32 @@ EOF
 
 # Checks
 ## Check for help flag
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
+show_help=false
+
+while getopts ":hp:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        p)
+            proj_name="$OPTARG"
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Check for missing flags
+if [[ -z "$proj_name" ]]; then
+    echo "Error: Missing required argument -p (project directory name)." >&2
+    exit 1
 fi
 
 # Fetch variables
@@ -49,7 +74,6 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-proj_name="$1"
 dest="${PROJ_DIR}/${proj_name}"
 readme="${TEMPLATE_DIR}/project_readme.txt"
 

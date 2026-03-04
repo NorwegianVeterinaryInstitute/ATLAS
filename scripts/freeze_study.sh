@@ -7,13 +7,13 @@ set -e
 # Help function
 show_help() {
     cat << EOF
-Usage: freeze_study.sh STUDY_DIR PROJECT_DIR
+Usage: freeze_study.sh -s STUDY_DIR -p PROJECT_DIR
 
 Freeze a study by creating a tarball and transferring it to the freeze directory.
 
 ARGUMENTS:
-    STUDY_DIR      Name of the study directory to freeze
-    PROJECT_DIR    Name of the project directory containing the study
+    -s STUDY_DIR      Name of the study directory to freeze
+    -p PROJECT_DIR    Name of the project directory containing the study
 
 DESCRIPTION:
     This script performs the following operations:
@@ -28,7 +28,7 @@ DESCRIPTION:
     The study can be restored later using the thaw_study.sh script.
 
 EXAMPLE:
-    freeze_study.sh study_mydata_20231120 myproject
+    freeze_study.sh -s study_mydata_20231120 -p myproject
 
 EOF
     exit 0
@@ -36,8 +36,40 @@ EOF
 
 # Checks
 ## Check for help flag
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
+show_help=false
+
+while getopts ":hs:p:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        s)
+            study_dir="$OPTARG"
+            ;;
+        p)
+            proj_name="$OPTARG"
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Check for missing flags
+if [[ -z "$proj_name" ]]; then
+    echo "Error: Missing required argument -p (project directory name)." >&2
+    exit 1
+fi
+
+if [[ -z "$study_dir" ]]; then
+    echo "Error: Missing required argument -s (study directory name)." >&2
+    exit 1
 fi
 
 # Get input and set variables
@@ -52,30 +84,14 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir="$1"
-proj_dir="$2"
 me=$(whoami)
 output="${FREEZE_DIR}"
 proj_loc="${PROJ_DIR}"
-proj_fullpath="${proj_loc}/${proj_dir}"
-fullpath="${proj_loc}/${proj_dir}/${study_dir}"
+proj_fullpath="${proj_loc}/${proj_name}"
+fullpath="${proj_loc}/${proj_name}/${study_dir}"
 data_dir="${ACTIVE_DATA_DIR}"
 
 # Checks
-## Check for user-supplied parameters
-if [[ -z "$1" ]]; then
-    echo "Error: No study directory name provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
-if [[ -z "$2" ]]; then
-    echo "Error: No project directory name provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
-
 ## Check if dirs exist
 if [[ ! -d "$proj_fullpath" ]]; then
     echo "Supplied project directory does not exist."

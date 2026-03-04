@@ -5,13 +5,15 @@
 # Help function
 show_help() {
     cat << EOF
-Usage: activate_data.sh INPUT_CSV OUTPUT_DIR
+Usage: activate_data.sh -c INPUT_CSV -d OUTPUT_DIR -a
 
 Transfer data from tarball path to ${ACTIVE_DATA_DIR}.
 
 ARGUMENTS:
-    INPUT_CSV      Path to CSV file containing sample names and tarball paths
-    OUTPUT_DIR     Output directory name in format: project_study_YYYYMMDD
+    -c INPUT_CSV      Path to CSV file containing sample names and tarball paths
+    -d OUTPUT_DIR     Output directory name in format: project_study_YYYYMMDD
+    -a                Append mode (optional)
+    -h                Show this help message
 
 DESCRIPTION:
     This script performs the following operations:
@@ -35,7 +37,7 @@ DESCRIPTION:
     - Empty lines: "",""
 
 EXAMPLE:
-    activate_data.sh samples.csv MyProj_Study1_20231120
+    activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -a
 
 EOF
     exit 0
@@ -70,6 +72,17 @@ while getopts ":hac:d:" opt; do
             ;;
     esac
 done
+
+# Check for missing flags
+if [[ -z "$csvfile" ]]; then
+    echo "Error: Missing required argument -c (input CSV file)." >&2
+    exit 1
+fi
+
+if [[ -z "$study_dir" ]]; then
+    echo "Error: Missing required argument -d (output directory name)." >&2
+    exit 1
+fi
 
 #Get input and set variables
 ## Get script dir
