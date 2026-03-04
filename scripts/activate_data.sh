@@ -1,7 +1,6 @@
 #!/bin/bash
 
-## Script used to transfer data from NIRD to
-## /cluster/shared/vetinst/active_data
+## Script used to transfer data from tarball location to ${ACTIVE_DATA_DIR}.
 
 # Help function
 show_help() {
@@ -42,26 +41,39 @@ EOF
     exit 0
 }
 
-# Checks
-## Check for help flag
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
-fi
+# Check flags
+append=false
+show_help=false
 
-## Check for user-supplied parameters
-if [[ -z "$1" ]]; then
-    echo "Error: No input csv provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
+while getopts ":hac:d:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        a)
+            append=true
+            ;;
+        c)
+            csvfile="$OPTARG"
+            ;;
+        d)
+            study_dir="$OPTARG"
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
 
-if [[ -z "$2" ]]; then
-    echo "Error: No output directory provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
-# Get input and set variables
+#Get input and set variables
+## Get script dir
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ## Get config variables
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
@@ -72,15 +84,16 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+source "$SCRIPT_DIR/lib.sh"
 
-csv=$(realpath "$1")
-dest="${ACTIVE_DATA_DIR}/${2}"
+csv=$(realpath "$csvfile")
+dest="${ACTIVE_DATA_DIR}/${study_dir}"
 
 ## Check for output directory name structure
 ### Check for project_study_date
 regex='^([a-zA-Z0-9-]+)_([a-zA-Z0-9-]+)_([0-9]{8})$'
 
-if [[ "$2" =~ $regex ]]; then
+if [[ "$study_dir" =~ $regex ]]; then
     project="${BASH_REMATCH[1]}"
     study="${BASH_REMATCH[2]}"
     date_part="${BASH_REMATCH[3]}"
@@ -98,143 +111,85 @@ else
     exit 1
 fi
 
-# Function to strip quotes from a string
-strip_quotes() {
-    local str="$1"
-    # Remove leading and trailing quotes
-    str="${str#\"}"
-    str="${str%\"}"
-    echo "$str"
-}
+# Convert line endings to Unix format
+dos2unix -q "$csv"
 
 # Check tarball presence
-dos2unix -q "$csv"
-echo "Checking tarballs..."
-missing=0
-expected_reads=0
-
-while IFS="," read -r name tarball
-do
-    # Strip quotes from both fields
-    name=$(strip_quotes "$name")
-    tarball=$(strip_quotes "$tarball")
-    
-    # Skip empty lines
-    if [[ -z "$name" && -z "$tarball" ]]; then
-        continue
-    fi
-    
-    # Split tarball field by comma to handle multiple tarballs
-    IFS=',' read -ra tarball_array <<< "$tarball"
-    
-    for tarpath in "${tarball_array[@]}"; do
-        # Trim whitespace
-        tarpath=$(echo "$tarpath" | xargs)
-        
-        if [[ ! -f "$tarpath" ]]; then
-            echo "Error: Tarball not found: $tarpath"
-            echo "$name,$tarpath" >> missing_tarballs.csv
-            missing=1
-        else
-            # Count expected read sets from this tarball for this sample
-            # Each sample typically has R1 and R2 files
-            count=$(tar -tvf "$tarpath" 2>/dev/null | grep -c "$name.*\(fastq\.gz\|fq\.gz\)$" || echo 0)
-            expected_reads=$((expected_reads + count))
-        fi
-    done
-done < <(tail -n +2 "$csv")
-
-if [[ "$missing" -eq 1 ]]; then
-    echo "One or more tarballs are missing. Please fix and rerun."
+if ! check_tarballs "$csv"; then
     exit 1
 fi
 
-echo "All tarballs found. Starting transfer..."
-echo "Expected reads: $expected_reads"
+echo "All tarballs found."
+echo "Expected reads: $EXPECTED_READS"
 loopcount=0
 
-## Check if destination dir exists
-if [[ -d "$dest" ]]; then
-    echo "Output directory already exists. Please choose a different name."
-    exit 1
-else
-    echo "Creating output directory"
-    mkdir "$dest"
-    cd "$dest" || exit
-fi
-
-# Transfer files
-echo "Transferring files..."
-while IFS="," read -r name tarball
-do
-    # Strip quotes from both fields
-    name=$(strip_quotes "$name")
-    tarball=$(strip_quotes "$tarball")
-    
-    # Skip empty lines
-    if [[ -z "$name" && -z "$tarball" ]]; then
-        continue
-    fi
-    
-    # Split tarball field by comma to handle multiple tarballs
-    IFS=',' read -ra tarball_array <<< "$tarball"
-    
-    # Track if sample was found in at least one tarball
-    sample_found=0
-    
-    for tarpath in "${tarball_array[@]}"; do
-        # Trim whitespace
-        tarpath=$(echo "$tarpath" | xargs)
-        
-        # Check to see if the file is present in the tarball
-        if tar -tvf "$tarpath" 2>/dev/null | grep -q "$name"; then
-            sample_found=1
-            filenames=$(tar -tvf "$tarpath" | grep "$name" | grep -e 'fastq.gz$' -e "fq.gz$" | awk '{print $6}')
-            for i in $filenames;
-            do
-                tar -xf "$tarpath" "$i"
-                mv "$i" .
-                chmod 444 "$(basename "$i")"
-                sha512sum "$(basename "$i")" >> sha512sums.txt
-                tarball_name=$(basename "$tarpath")
-                rm -rf "${dest:?}/${tarball_name%.tar}"
-                # Increment loopcount for each file found
-                ((loopcount++))
-            done
+# Split at append flag
+## Append mode
+if $append; then
+    echo "Append mode detected. This will append data to an existing study."
+    read -p "Continue with appending data? (y/n): " response
+    if [[ "$response" != "y" && "$response" != "Y" ]]; then
+        echo "Append cancelled."
+        exit 1
+    else
+        if [[ -d "$dest" ]]; then
+            echo "Directory detected. Files will be added to existing directory."
+            cd "$dest" || exit
+        else
+            echo "Output directory does not exist, cannot append."
+            exit 1
         fi
-    done
-    
-    # If sample was not found in any tarball, report it
-    if [[ $sample_found -eq 0 ]]; then
-        echo "$name,$tarball" >> missing_samples.csv
-    fi
-    
-    # Verify sample exists in all specified tarballs (if multiple)
-    if [[ ${#tarball_array[@]} -gt 1 ]]; then
-        for tarpath in "${tarball_array[@]}"; do
-            tarpath=$(echo "$tarpath" | xargs)
-            if ! tar -tvf "$tarpath" 2>/dev/null | grep -q "$name"; then
-                echo "Warning: Sample $name not found in tarball $tarpath (but found in others)"
-                echo "$name,$tarpath" >> missing_in_some_tarballs.csv
+        echo "Detecting existing csv file..."
+        if [[ -f "${dest}/data.csv" ]]; then
+            echo "Existing csv file found. Checking for conflicts..."
+            conflicts=$(find_append_conflicts "$csv" "${dest}/data.csv")
+            status=$?
+
+            if [[ $status -ne 0 ]]; then
+                echo "Error: these sample/tarball combinations already exist:"
+                printf '%s\n' "$conflicts"
+                exit 1
+            else
+                echo "No conflicts found. Appending data..."
+                # Run transfer
+                transfer_files "$csv" "$append"
+                # Log the transfer
+                time=$(date)
+                user=$(whoami)
+                echo "Appended by" "$user" "on" "$time" >> append_log.txt
+                echo "Project:" "$project" >> append_log.txt
+                echo "Study: study_$2" >> append_log.txt
+                tail -n +2 "$csv" >> "${dest}/data.csv"
+
+                echo "Data appended successfully!"
             fi
-        done
+        else
+            echo "No existing csv file found. Cannot append data."
+            exit 1
+        fi
     fi
-done < <(tail -n +2 "$csv")
-
-# Check if all files were identified
-if [[ $loopcount -eq $expected_reads ]]; then
-    echo "All files transferred."
+## Non-append mode
 else
-    echo "Warning: Expected $expected_reads reads, but found $loopcount"
-    echo "Please check output for missing files."
+    # Directory check
+    if [[ -d "$dest" ]]; then
+        echo "Output directory already exists. Please choose a different name."
+        exit 1
+    else
+        echo "Creating output directory"
+        mkdir "$dest"
+        cd "$dest" || exit
+    fi
+    # Transfer files
+    transfer_files "$csv" "$append"
+    
+    # Create note file in subproject
+    time=$(date)
+    user=$(whoami)
+    echo "Created by" "$user" "on" "$time" > info.txt
+    echo "Project:" "$project" >> info.txt
+    echo "Study: study_$2" >> info.txt
+    cp "$csv" data.csv
+    echo "Data activated!"
 fi
+    
 
-# Create note file in subproject
-time=$(date)
-user=$(whoami)
-echo "Created by" "$user" "on" "$time" > info.txt
-echo "Project:" "$project" >> info.txt
-echo "Study: study_$2" >> info.txt
-cp "$csv" reads.csv
-
-echo "Data activated!"
