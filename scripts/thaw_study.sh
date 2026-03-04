@@ -138,7 +138,7 @@ echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${input}/thaw_log.txt"
 
 # Reconstitute study data
 echo "Reconstituting study data..."
-(bash "${SCRIPT_DIR}/activate_data.sh" "${fullpath}/reads.csv" "${study_dir##study_}")
+(bash "${SCRIPT_DIR}/activate_data.sh" "${fullpath}/data.csv" "${study_dir##study_}")
 
 echo "Comparing sha512sums..."
 test=$( grep -Fxvf "${data_dir}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
