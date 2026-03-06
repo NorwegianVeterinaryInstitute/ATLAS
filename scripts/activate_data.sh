@@ -111,7 +111,7 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
-# shellcheck source=lib.sh
+# shellcheck source=/dev/null
 source "$SCRIPT_DIR/lib.sh"
 
 csv=$(realpath "$csvfile")
