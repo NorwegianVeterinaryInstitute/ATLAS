@@ -85,8 +85,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 source "$CONFIG_FILE"
 
 dest="${PROJ_DIR}/${proj_dir}"
-study_data="${ACTIVE_DATA_DIR}/${2}"
-study="${dest}/study_${2}"
+study_data="${ACTIVE_DATA_DIR}/${study_data}"
+study="${dest}/study_$(basename "$study_data")"
 readme="${TEMPLATE_DIR}/study_readme.txt"
 
 ## Check if dirs exist
@@ -112,6 +112,7 @@ cp "$readme" "${study}/README.txt"
 cp "${study_data}/info.txt" "${study}/data_info.txt"
 cp "${study_data}/data.csv" "${study}"
 cp "${study_data}/sha512sums.txt" "${study}"
+cp "${study_data}/transferred_reads.txt" "${study}" 
 
 echo "Creating symbolic links to read files..."
 mkdir "${study}/data"
