@@ -7,18 +7,19 @@ show_help() {
     cat << EOF
 Usage: activate_data.sh -c INPUT_CSV -d OUTPUT_DIR -a
 
-Transfer data from tarball path to ${ACTIVE_DATA_DIR}.
+Transfer data from tarball path to ACTIVE_DATA_DIR.
 
 ARGUMENTS:
     -c INPUT_CSV      Path to CSV file containing sample names and tarball paths
     -d OUTPUT_DIR     Output directory name in format: project_study_YYYYMMDD
+    -p PROJECT_DIR    Name of the project directory (optional, to be used with append mode)
     -a                Append mode (optional)
     -h                Show this help message
 
 DESCRIPTION:
     This script performs the following operations:
     - Validates the CSV file and checks for tarball presence
-    - Creates the output directory at ${ACTIVE_DATA_DIR}/OUTPUT_DIR
+    - Creates the output directory at ACTIVE_DATA_DIR/OUTPUT_DIR
     - Extracts FASTQ files from tarballs specified in the CSV
     - Sets files to read-only (chmod 444)
     - Generates SHA512 checksums for all files
@@ -36,6 +37,12 @@ DESCRIPTION:
     - Multiple tarballs per line: "sample1","/path/to/tarball1.tar,/path/to/tarball2.tar"
     - Empty lines: "",""
 
+    Append mode (-a) allows adding new samples to an existing study directory. Supplying the 
+    project directory name associated with the existing study is required in append mode (-p). 
+    In append mode, the script will check for conflicts with existing sample/tarball 
+    combinations and will not proceed if conflicts are found. The script will then append new 
+    data to the existing directory and update the data.csv file.
+
 EXAMPLE:
     activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -a
 
@@ -47,7 +54,7 @@ EOF
 append=false
 show_help=false
 
-while getopts ":hac:d:" opt; do
+while getopts ":hac:d:p:" opt; do
     case "$opt" in
         h)
             show_help
@@ -60,7 +67,10 @@ while getopts ":hac:d:" opt; do
             csvfile="$OPTARG"
             ;;
         d)
-            study_dir="$OPTARG"
+            data_dir="$OPTARG"
+            ;;
+        p)
+            proj_name="$OPTARG"
             ;;
         :)
             echo "Option -$OPTARG requires an argument." >&2
@@ -79,10 +89,16 @@ if [[ -z "$csvfile" ]]; then
     exit 1
 fi
 
-if [[ -z "$study_dir" ]]; then
+if [[ -z "$data_dir" ]]; then
     echo "Error: Missing required argument -d (output directory name)." >&2
     exit 1
 fi
+
+if [[ "$append" = true && -z "$proj_name" ]]; then
+    echo "Error: Append mode requires -p (project directory name)." >&2
+    exit 1
+fi
+
 
 #Get input and set variables
 ## Get script dir
@@ -100,13 +116,13 @@ source "$CONFIG_FILE"
 source "$SCRIPT_DIR/lib.sh"
 
 csv=$(realpath "$csvfile")
-dest="${ACTIVE_DATA_DIR}/${study_dir}"
+dest="${ACTIVE_DATA_DIR}/${data_dir}"
 
 ## Check for output directory name structure
 ### Check for project_study_date
 regex='^([a-zA-Z0-9-]+)_([a-zA-Z0-9-]+)_([0-9]{8})$'
 
-if [[ "$study_dir" =~ $regex ]]; then
+if [[ "$data_dir" =~ $regex ]]; then
     project="${BASH_REMATCH[1]}"
     study="${BASH_REMATCH[2]}"
     date_part="${BASH_REMATCH[3]}"
@@ -145,11 +161,13 @@ if $append; then
         echo "Append cancelled."
         exit 1
     else
-        if [[ -d "$dest" ]]; then
-            echo "Directory detected. Files will be added to existing directory."
+        # Check for existing directories and csv file, then run transfer
+        study_dir="${PROJ_DIR}/${proj_name}/study_${data_dir}"
+        if [[ -d "$dest" && -d "$study_dir" ]]; then
+            echo "Data and Project directories detected. Files will be added to existing directory."
             cd "$dest" || exit
         else
-            echo "Output directory does not exist, cannot append."
+            echo "Output directories do not exist, cannot append."
             exit 1
         fi
         echo "Detecting existing csv file..."
@@ -173,6 +191,15 @@ if $append; then
                 echo "Project:" "$project" >> append_log.txt
                 echo "Study: study_$2" >> append_log.txt
                 tail -n +2 "$csv" >> "${dest}/data.csv"
+
+                echo "Copying information to study directory..."
+                cp "${dest}/data.csv" "${study_dir}/data.csv"
+                cp "${dest}/append_log.txt" "${study_dir}/append_log.txt"
+                cp "${dest}/appended_reads.txt" "${study_dir}/appended_reads.txt"
+                cp sha512sums.txt "${study_dir}/sha512sums.txt"
+
+                echo "Adding symlinks..."
+                ln -s "${ACTIVE_DATA_DIR}/${data_dir}"/*fastq.gz "${study_dir}/data" 2>/dev/null
 
                 echo "Data appended successfully!"
             fi
