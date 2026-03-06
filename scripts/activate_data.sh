@@ -47,12 +47,10 @@ EXAMPLE:
     activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -a
 
 EOF
-    exit 0
 }
 
 # Check flags
 append=false
-show_help=false
 
 while getopts ":hac:d:p:" opt; do
     case "$opt" in
@@ -113,6 +111,7 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+# shellcheck source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
 csv=$(realpath "$csvfile")
@@ -124,7 +123,6 @@ regex='^([a-zA-Z0-9-]+)_([a-zA-Z0-9-]+)_([0-9]{8})$'
 
 if [[ "$data_dir" =~ $regex ]]; then
     project="${BASH_REMATCH[1]}"
-    study="${BASH_REMATCH[2]}"
     date_part="${BASH_REMATCH[3]}"
 
     # Validate the extracted date
@@ -150,13 +148,12 @@ fi
 
 echo "All tarballs found."
 echo "Expected reads: $EXPECTED_READS"
-loopcount=0
 
 # Split at append flag
 ## Append mode
 if $append; then
     echo "Append mode detected. This will append data to an existing study."
-    read -p "Continue with appending data? (y/n): " response
+    read -r -p "Continue with appending data? (y/n): " response
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         echo "Append cancelled."
         exit 1

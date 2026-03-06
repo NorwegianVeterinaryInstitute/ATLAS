@@ -29,13 +29,10 @@ EXAMPLE:
     create_project.sh VetInst_BacterialGenomics
 
 EOF
-    exit 0
 }
 
 # Checks
 ## Check for help flag
-show_help=false
-
 while getopts ":hp:" opt; do
     case "$opt" in
         h)

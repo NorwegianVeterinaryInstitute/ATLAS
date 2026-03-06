@@ -17,7 +17,7 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script performs the following operations:
-    - Retrieves a frozen study from the freeze directory (${FREEZE_DIR})
+    - Retrieves a frozen study from the freeze directory (FREEZE_DIR)
     - Verifies checksums before and after transfer
     - Unpacks the tarball to restore the study directory
     - Reconstitutes the study data using activate_data.sh
@@ -32,16 +32,12 @@ EXAMPLE:
     thaw_study.sh study_mydata_20231120 myproject
 
 EOF
-    exit 0
 }
 
 # Get script dir
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# Checks
-## Check for help flag
-show_help=false
-
+# Define flags
 while getopts ":hp:s:" opt; do
     case "$opt" in
         h)
@@ -52,7 +48,7 @@ while getopts ":hp:s:" opt; do
             study_dir="$OPTARG"
             ;;
         p)
-            proj_dir="$OPTARG"
+            proj_name="$OPTARG"
             ;;
         :)
             echo "Option -$OPTARG requires an argument." >&2
@@ -71,7 +67,7 @@ if [[ -z "$study_dir" ]]; then
     exit 1
 fi
 
-if [[ -z "$proj_dir" ]]; then
+if [[ -z "$proj_name" ]]; then
     echo "Error: Missing required argument -p (project directory name)." >&2
     exit 1
 fi
@@ -90,11 +86,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 source "$CONFIG_FILE"
 
 me=$(whoami)
-input="${FREEZE_DIR}"
-proj_loc="${PROJ_DIR}"
-proj_fullpath="${proj_loc}/${proj_dir}"
-fullpath="${proj_loc}/${proj_dir}/${study_dir}"
-data_dir="${ACTIVE_DATA_DIR}"
+proj_fullpath="${PROJ_DIR}/${proj_name}"
+fullpath="${PROJ_DIR}/${proj_name}/${study_dir}"
 
 # Checks
 ## Check if dirs exist
@@ -114,12 +107,12 @@ echo "All checks passed, creating tarball and thawing..."
 echo "Thawing tarball and transferring to Saga..."
 
 ## Get checksum before transfer
-hash_pre=$(sha512sum "${input}/${study_dir}.tar.gz" | awk '{print $1}')
+hash_pre=$(sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | awk '{print $1}')
 
 ## Transfer file
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW "${input}/${study_dir}.tar.gz" "$proj_fullpath" 2> "$rsync_err_file"; then
+if rsync -avPW "${FREEZE_DIR}/${study_dir}.tar.gz" "$proj_fullpath" 2> "$rsync_err_file"; then
     rm -f "$rsync_err_file"
 else
     status=$?
@@ -150,16 +143,16 @@ echo "Thawed by $me on $(date)" >> "${study_dir}/freeze_log.txt"
 echo "$study_dir thawed by $me on $(date)" >> "${proj_fullpath}/freeze_log.txt"
 
 ## Cleanup
-rm -f "${input:?}/${study_dir}.tar.gz"
+rm -f "${FREEZE_DIR:?}/${study_dir}.tar.gz"
 rm -f "${study_dir:?}.tar.gz"
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${input}/thaw_log.txt"
+echo -e "$proj_name\t$study_dir\t$me\t$(date)" >> "${FREEZE_DIR}/thaw_log.txt"
 
 # Reconstitute study data
 echo "Reconstituting study data..."
 (bash "${SCRIPT_DIR}/activate_data.sh" -c "${fullpath}/data.csv" -d "${study_dir##study_}")
 
 echo "Comparing sha512sums..."
-test=$( grep -Fxvf "${data_dir}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
+test=$( grep -Fxvf "${ACTIVE_DATA_DIR}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
 
 if [[ ! -z "${test}" ]]; then
     echo "sha512sums not equal, please check the following reads:"

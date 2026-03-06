@@ -41,13 +41,9 @@ EXAMPLE:
     archive_study.sh -s study_mydata_20231120 -p myproject
 
 EOF
-    exit 0
 }
 
-# Checks
-## Check for help flag
-show_help=false
-
+# Define flags
 while getopts ":hs:p:" opt; do
     case "$opt" in
         h)
@@ -94,13 +90,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir="$study_dir"
-proj_dir="$proj_name"
-proj_loc="${PROJ_DIR}"
-proj_fullpath="${proj_loc}/${proj_dir}"
-fullpath="${proj_loc}/${proj_dir}/${study_dir}"
-data_dir="${ACTIVE_DATA_DIR}"
-output="${ARCHIVE_DIR}"
+proj_fullpath="${PROJ_DIR}/${proj_name}"
+fullpath="${PROJ_DIR}/${proj_name}/${study_dir}"
 
 # Checks
 ## Check if dirs exist
@@ -124,7 +115,7 @@ threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
 if (( size_gb > threshold )); then
     echo "Warning: Experiment directory '$study_dir' is very large (~${size_gb}GB)."
     echo "Please consider removing additional redundant or intermediary files."
-    read -p "Continue archiving anyway? (y/n): " response
+    read -r -p "Continue archiving anyway? (y/n): " response
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         echo "Archiving cancelled."
         exit 1
@@ -154,7 +145,7 @@ if [[ ! -d "$fullpath/data" ]]; then
 fi
 
 ## Check if experiment exists in the archive
-if [[ -d "${output}/${study_dir}.tar.gz" ]]; then
+if [[ -d "${ARCHIVE_DIR}/${study_dir}.tar.gz" ]]; then
     echo "Study already archived. Please verify name of the study."
     exit 1
 fi
@@ -165,7 +156,7 @@ tar -czf "${fullpath}.tar.gz" "$fullpath"
 
 # Verify tarball archive
 echo "Verifying archive..."
-if tar -tzf ${fullpath}.tar.gz > /dev/null; then
+if tar -tzf "${fullpath}.tar.gz" > /dev/null; then
     echo "Archive verification successful!"
 else
     echo "Error: Archive verification failed. Deleting corrupt archive."
@@ -181,7 +172,7 @@ hash_pre="$(sha512sum "${fullpath}.tar.gz" | awk '{print $1}')"
 echo "Moving archive to NIRD..."
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW "${fullpath}.tar.gz" "$output" 2> "$rsync_err_file"; then
+if rsync -avPW "${fullpath}.tar.gz" "$ARCHIVE_DIR" 2> "$rsync_err_file"; then
     rm -f "$rsync_err_file"
 else
     status=$?
@@ -194,26 +185,26 @@ fi
 
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."
-hash_post="$(sha512sum "${output}/${study_dir}.tar.gz" | awk '{print $1}')"
+hash_post="$(sha512sum "${ARCHIVE_DIR}/${study_dir}.tar.gz" | awk '{print $1}')"
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal, transfer complete!"
 else
     echo "Error: Checksums not equal. Please check files manually."
-    rm -f "${output}/${study_dir}.tar.gz"
+    rm -f "${ARCHIVE_DIR:?}/${study_dir}.tar.gz"
     exit 1
 fi
 
 # Cleanup and logging
 echo "Performing cleanup..."
-chmod 444 "${output:?}/${study_dir}.tar.gz"
+chmod 444 "${ARCHIVE_DIR:?}/${study_dir}.tar.gz"
 rm -f "${fullpath:?}.tar.gz"
 rm -rf "${fullpath:?}"
-rm -rf "${data_dir:?}/${study_dir##study_}"
+rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"
 
 echo "Logging the transfer..."
 me=$(whoami)
 echo "$study_dir archived by $me on $(date)" >> "${proj_fullpath}/archive_log.txt"
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${output}/archive_log.txt"
+echo -e "$proj_name\t$study_dir\t$me\t$(date)" >> "${ARCHIVE_DIR}/archive_log.txt"
 
 echo "Archiving complete!"

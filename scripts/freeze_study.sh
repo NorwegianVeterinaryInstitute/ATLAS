@@ -20,7 +20,7 @@ DESCRIPTION:
     - Checks if the study directory exists
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
-    - Transfers the archive to the freeze directory (${FREEZE_DIR})
+    - Transfers the archive to the freeze directory (FREEZE_DIR)
     - Verifies checksums before and after transfer
     - Removes the original study directory and associated active data
     - Logs the freezing operation
@@ -31,13 +31,9 @@ EXAMPLE:
     freeze_study.sh -s study_mydata_20231120 -p myproject
 
 EOF
-    exit 0
 }
 
-# Checks
-## Check for help flag
-show_help=false
-
+# Define flags
 while getopts ":hs:p:" opt; do
     case "$opt" in
         h)
@@ -85,11 +81,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 source "$CONFIG_FILE"
 
 me=$(whoami)
-output="${FREEZE_DIR}"
-proj_loc="${PROJ_DIR}"
-proj_fullpath="${proj_loc}/${proj_name}"
-fullpath="${proj_loc}/${proj_name}/${study_dir}"
-data_dir="${ACTIVE_DATA_DIR}"
+proj_fullpath="${PROJ_DIR}/${proj_name}"
+fullpath="${PROJ_DIR}/${proj_name}/${study_dir}"
 
 # Checks
 ## Check if dirs exist
@@ -104,7 +97,7 @@ if [[ ! -d "$fullpath" ]]; then
 fi
 
 ## Check if study exists in freezer
-if [[ -d "${output}/${study_dir}.tar.gz" ]]; then
+if [[ -d "${FREEZE_DIR}/${study_dir}.tar.gz" ]]; then
     echo "Study already frozen. Please verify name of the study."
     exit 1
 fi
@@ -135,7 +128,7 @@ echo "Moving archive to freeze directory..."
 
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW "${study_dir}.tar.gz" "$output" 2> "$rsync_err_file"; then
+if rsync -avPW "${study_dir}.tar.gz" "$FREEZE_DIR" 2> "$rsync_err_file"; then
     rm -f "${rsync_err_file:?}"
 else
     status=$?
@@ -148,22 +141,22 @@ fi
 
 # Check tarball checksum after transfer
 echo "Verifying checksum after transfer..."
-hash_post=$(sha512sum "${output}/${study_dir}.tar.gz" | awk '{print $1}')
+hash_post=$(sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | awk '{print $1}')
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     echo "Checksums are equal!"
 else
     echo "Error: Checksums not equal. Please check files manually."
-    rm -f "${output:?}/${study_dir}.tar.gz"
+    rm -f "${FREEZE_DIR:?}/${study_dir}.tar.gz"
     exit 1
 fi
 
 # Log the freezing and cleanup
 echo "Logging the freezing and cleaning up files..."
 echo "$study_dir frozen by $me on $(date)" >> "${proj_fullpath}/freeze_log.txt"
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${output}/freeze_log.txt"
+echo -e "$PROJ_DIR\t$study_dir\t$me\t$(date)" >> "${FREEZE_DIR}/freeze_log.txt"
 rm -rf "${fullpath:?}"
 rm -f "${fullpath:?}.tar.gz"
-rm -rf "${data_dir:?}/${study_dir##study_}"
+rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"
 
 echo "Freezing complete!"
