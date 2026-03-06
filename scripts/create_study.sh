@@ -36,8 +36,6 @@ EOF
 
 # Checks
 ## Check for help flag
-show_help=false
-
 while getopts ":hp:d:" opt; do
     case "$opt" in
         h)
