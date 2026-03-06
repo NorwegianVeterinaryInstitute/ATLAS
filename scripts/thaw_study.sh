@@ -17,7 +17,7 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script performs the following operations:
-    - Retrieves a frozen study from the freeze directory (${FREEZE_DIR})
+    - Retrieves a frozen study from the freeze directory (FREEZE_DIR)
     - Verifies checksums before and after transfer
     - Unpacks the tarball to restore the study directory
     - Reconstitutes the study data using activate_data.sh
@@ -32,17 +32,46 @@ EXAMPLE:
     thaw_study.sh study_mydata_20231120 myproject
 
 EOF
-    exit 0
 }
 
 # Get script dir
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# Checks
-## Check for help flag
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    show_help
+# Define flags
+while getopts ":hp:s:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        s)
+            study_dir="$OPTARG"
+            ;;
+        p)
+            proj_name="$OPTARG"
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Check for missing flags
+if [[ -z "$study_dir" ]]; then
+    echo "Error: Missing required argument -s (study directory name)." >&2
+    exit 1
 fi
+
+if [[ -z "$proj_name" ]]; then
+    echo "Error: Missing required argument -p (project directory name)." >&2
+    exit 1
+fi
+
 
 # Get input and set variables
 ## Get config variables
@@ -56,29 +85,11 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-study_dir="$1"
-proj_dir="$2"
 me=$(whoami)
-input="${FREEZE_DIR}"
-proj_loc="${PROJ_DIR}"
-proj_fullpath="${proj_loc}/${proj_dir}"
-fullpath="${proj_loc}/${proj_dir}/${study_dir}"
-data_dir="${ACTIVE_DATA_DIR}"
+proj_fullpath="${PROJ_DIR}/${proj_name}"
+fullpath="${PROJ_DIR}/${proj_name}/${study_dir}"
 
 # Checks
-## Check for user-supplied parameters
-if [[ -z "$1" ]]; then
-    echo "Error: No study directory name provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
-if [[ -z "$2" ]]; then
-    echo "Error: No project directory name provided."
-    echo "Use -h or --help for usage information."
-    exit 1
-fi
-
 ## Check if dirs exist
 if [[ ! -d "$proj_fullpath" ]]; then
     echo "Supplied project directory does not exist."
@@ -96,12 +107,12 @@ echo "All checks passed, creating tarball and thawing..."
 echo "Thawing tarball and transferring to Saga..."
 
 ## Get checksum before transfer
-hash_pre=$(sha512sum "${input}/${study_dir}.tar.gz" | awk '{print $1}')
+hash_pre=$(sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | awk '{print $1}')
 
 ## Transfer file
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW "${input}/${study_dir}.tar.gz" "$proj_fullpath" 2> "$rsync_err_file"; then
+if rsync -avPW "${FREEZE_DIR}/${study_dir}.tar.gz" "$proj_fullpath" 2> "$rsync_err_file"; then
     rm -f "$rsync_err_file"
 else
     status=$?
@@ -132,16 +143,16 @@ echo "Thawed by $me on $(date)" >> "${study_dir}/freeze_log.txt"
 echo "$study_dir thawed by $me on $(date)" >> "${proj_fullpath}/freeze_log.txt"
 
 ## Cleanup
-rm -f "${input:?}/${study_dir}.tar.gz"
+rm -f "${FREEZE_DIR:?}/${study_dir}.tar.gz"
 rm -f "${study_dir:?}.tar.gz"
-echo -e "$proj_dir\t$study_dir\t$me\t$(date)" >> "${input}/thaw_log.txt"
+echo -e "$proj_name\t$study_dir\t$me\t$(date)" >> "${FREEZE_DIR}/thaw_log.txt"
 
 # Reconstitute study data
 echo "Reconstituting study data..."
-(bash "${SCRIPT_DIR}/activate_data.sh" "${fullpath}/reads.csv" "${study_dir##study_}")
+(bash "${SCRIPT_DIR}/activate_data.sh" -c "${fullpath}/data.csv" -d "${study_dir##study_}")
 
 echo "Comparing sha512sums..."
-test=$( grep -Fxvf "${data_dir}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
+test=$( grep -Fxvf "${ACTIVE_DATA_DIR}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
 
 if [[ ! -z "${test}" ]]; then
     echo "sha512sums not equal, please check the following reads:"
