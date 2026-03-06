@@ -31,7 +31,6 @@ EXAMPLE:
     create_study.sh -p myproject -d mydata_study_20231120
 
 EOF
-    exit 0
 }
 
 # Checks
