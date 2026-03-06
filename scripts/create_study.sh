@@ -42,7 +42,7 @@ while getopts ":hp:d:" opt; do
             exit 0
             ;;
         p)
-            proj_dir="$OPTARG"
+            proj_name="$OPTARG"
             ;;
         d)
             study_data="$OPTARG"
@@ -64,7 +64,7 @@ if [[ -z "$study_data" ]]; then
     exit 1
 fi
 
-if [[ -z "$proj_dir" ]]; then
+if [[ -z "$proj_name" ]]; then
     echo "Error: Missing required argument -p (project directory name)." >&2
     exit 1
 fi
@@ -81,7 +81,7 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
 
-dest="${PROJ_DIR}/${proj_dir}"
+dest="${PROJ_DIR}/${proj_name}"
 study_data="${ACTIVE_DATA_DIR}/${study_data}"
 study="${dest}/study_$(basename "$study_data")"
 readme="${TEMPLATE_DIR}/study_readme.txt"
