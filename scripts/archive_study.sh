@@ -160,27 +160,28 @@ fi
 
 # Create experiment tarball
 echo "All checks passed, creating tarball..."
-tar -czf "${fullpath}.tar.gz" "$fullpath"
+cd "$proj_fullpath"
+tar -czf "${study_dir}.tar.gz" "$study_dir"
 
 # Verify tarball archive
 echo "Verifying archive..."
-if tar -tzf "${fullpath}.tar.gz" > /dev/null; then
+if tar -tzf "${study_dir}.tar.gz" > /dev/null; then
     echo "Archive verification successful!"
 else
     echo "Error: Archive verification failed. Deleting corrupt archive."
-    rm -f "${fullpath}.tar.gz"
+    rm -f "${study_dir}.tar.gz"
     exit 1
 fi
 
 # Get checksum of archive
 echo "Creating checksum of archive..."
-hash_pre="$(sha512sum "${fullpath}.tar.gz" | awk '{print $1}')"
+hash_pre="$(sha512sum "${study_dir}.tar.gz" | awk '{print $1}')"
 
 # Transfer tarball to storage
 echo "Moving archive to NIRD..."
 rsync_err_file="$(mktemp)"
 
-if rsync -avPW "${fullpath}.tar.gz" "$ARCHIVE_DIR" 2> "$rsync_err_file"; then
+if rsync -avPW "${study_dir}.tar.gz" "$ARCHIVE_DIR" 2> "$rsync_err_file"; then
     rm -f "$rsync_err_file"
 else
     status=$?
@@ -206,8 +207,8 @@ fi
 # Cleanup and logging
 echo "Performing cleanup..."
 chmod 444 "${ARCHIVE_DIR:?}/${study_dir}.tar.gz"
-rm -f "${fullpath:?}.tar.gz"
-rm -rf "${fullpath:?}"
+rm -f "${study_dir}.tar.gz"
+rm -rf "${study_dir:?}"
 rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"
 
 echo "Logging the transfer..."
