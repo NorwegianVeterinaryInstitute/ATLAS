@@ -1,3 +1,4 @@
+#!/bin/bash
 # Functions used in ATLAS scripts
 
 # Function to strip quotes from a string
