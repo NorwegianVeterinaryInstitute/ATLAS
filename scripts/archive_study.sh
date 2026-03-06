@@ -105,6 +105,14 @@ if [[ ! -d "$fullpath" ]]; then
     exit 1
 fi
 
+## Prompt user for archive process confirmation
+echo "You are about to archive the study '$study_dir' from project '$proj_name' to ${ARCHIVE_DIR}."
+read -r -p "Start the archiving process? (y/n): " response
+if [[ "$response" != "y" && "$response" != "Y" ]]; then
+    echo "Archiving cancelled."
+    exit 1
+fi
+
 ## Check directory size
 size_kb=$(du -s "$fullpath" | awk '{print $1}')
 size_mb=$((size_kb / 1024))
