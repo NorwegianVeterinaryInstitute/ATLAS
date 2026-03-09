@@ -184,9 +184,13 @@ if $append; then
                 # Log the transfer
                 time=$(/usr/bin/date)
                 user=$(/usr/bin/whoami)
-                /usr/bin/printf "Appended by %s on %s\n" "$user" "$time" >> append_log.txt
-                /usr/bin/printf "Project: %s\n" "$project" >> append_log.txt
-                /usr/bin/printf "Study: study_%s\n" "$2" >> append_log.txt
+
+                {
+                    /usr/bin/printf "Appended by %s on %s\n" "$user" "$time";
+                    /usr/bin/printf "Project: %s\n" "$project";
+                    /usr/bin/printf "Study: study_%s\n" "$2";
+                } >> append_log.txt
+
                 /usr/bin/tail -n +2 "$csv" >> "${dest}/data.csv"
 
                 /usr/bin/printf "Copying information to study directory...\n"
@@ -222,9 +226,13 @@ else
     # Create note file in subproject
     time=$(/usr/bin/date)
     user=$(/usr/bin/whoami)
-    /usr/bin/printf "Created by %s on %s\n" "$user" "$time" > info.txt
-    /usr/bin/printf "Project: %s\n" "$project" >> info.txt
-    /usr/bin/printf "Study: study_%s\n" "$2" >> info.txt
+
+    {
+        /usr/bin/printf "Created by %s on %s\n" "$user" "$time";
+        /usr/bin/printf "Project: %s\n" "$project";
+        /usr/bin/printf "Study: study_%s\n" "$2";
+    } >> info.txt
+
     /usr/bin/cp "$csv" data.csv
     /usr/bin/printf "Data activated!\n"
 fi
