@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.0...v1.3.1) (2026-03-09)
+
+
+### Bug Fixes
+
+* added fullpaths to executables ([b288b11](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/b288b1125c8848166b838a95dc6f7f46f33d11e0))
+
 ## [1.3.0](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.2.0...v1.3.0) (2026-03-06)
 
 
