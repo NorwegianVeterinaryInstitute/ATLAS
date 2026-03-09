@@ -85,7 +85,6 @@ fi
 regex='^([a-zA-Z0-9-]+)_([a-zA-Z0-9-]+)$'
 
 if [[ "$proj_name" =~ $regex ]]; then
-    proj_num="${BASH_REMATCH[1]}"
     proj_name="${BASH_REMATCH[2]}"
 else
     /usr/bin/printf "Error: Input must follow the format projectNumber_projectName\n" >&2
