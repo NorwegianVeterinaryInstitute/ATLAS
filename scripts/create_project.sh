@@ -43,11 +43,11 @@ while getopts ":hp:" opt; do
             proj_name="$OPTARG"
             ;;
         :)
-            echo "Option -$OPTARG requires an argument." >&2
+            /usr/bin/printf "Option -%s requires an argument.\n" "$OPTARG" >&2
             exit 1
             ;;
         \?)
-            echo "Invalid option: -$OPTARG" >&2
+            /usr/bin/printf "Invalid option: -%s\n" "$OPTARG" >&2
             exit 1
             ;;
     esac
@@ -55,7 +55,7 @@ done
 
 # Check for missing flags
 if [[ -z "$proj_name" ]]; then
-    echo "Error: Missing required argument -p (project directory name)." >&2
+    /usr/bin/printf "Error: Missing required argument -p (project directory name).\n" >&2
     exit 1
 fi
 
@@ -64,7 +64,7 @@ fi
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 [[ -f "$CONFIG_FILE" ]] || {
-    echo "Config not found: $CONFIG_FILE" >&2
+    /usr/bin/printf "Config not found: %s\n" "$CONFIG_FILE" >&2
     exit 1
 }
 
@@ -75,10 +75,9 @@ dest="${PROJ_DIR}/${proj_name}"
 readme="${TEMPLATE_DIR}/project_readme.txt"
 
 # Checks
-## Check for user-supplied parameters
-if [[ -z "$1" ]]; then
-    echo "Error: No project name supplied."
-    echo "Use -h or --help for usage information."
+## Check if project readme exists
+if [[ ! -f "$readme" ]]; then
+    /usr/bin/printf "Error: Project README template not found at %s\n" "$readme" >&2
     exit 1
 fi
 
@@ -89,23 +88,23 @@ if [[ "$proj_name" =~ $regex ]]; then
     proj_num="${BASH_REMATCH[1]}"
     proj_name="${BASH_REMATCH[2]}"
 else
-    echo "Error: Input must follow the format projectNumber_projectName"
-    echo "No underscores '_' allowed in project number or project name"
-    echo "If no project number is available, use other informative info instead."
+    /usr/bin/printf "Error: Input must follow the format projectNumber_projectName\n" >&2
+    /usr/bin/printf "No underscores '_' allowed in project number or project name\n" >&2
+    /usr/bin/printf "If no project number is available, use other informative info instead.\n" >&2
     exit 1
 fi
 
 ## Check if destination dir exists
 if [[ -d "$dest" ]]; then
-    echo "Output directory already exists. Please choose a different name."
+    /usr/bin/printf "Output directory already exists. Please choose a different name.\n" >&2
     exit 1
 fi
 
 # Create project directory and subfiles
-echo "Creating project directory and populating files..."
-mkdir "$dest"
-user=$(whoami)
-echo "Created by $user on $(date)" > "${dest}/creation.txt"
-cp "$readme" "${dest}/README.txt"
-echo "Project $proj_name created in $dest."
-echo "Please fill out the README.txt file in the project directory."
+/usr/bin/printf "Creating project directory and populating files...\n"
+/usr/bin/mkdir "$dest"
+user=$(/usr/bin/whoami)
+/usr/bin/printf "Created by %s on %s\n" "$user" "$(/usr/bin/date)" > "${dest}/creation.txt"
+/usr/bin/cp "$readme" "${dest}/README.txt"
+/usr/bin/printf "Project %s created in %s.\n" "$proj_name" "$dest"
+/usr/bin/printf "Please fill out the README.txt file in the project directory.\n"
