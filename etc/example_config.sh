@@ -1,3 +1,4 @@
+# shellcheck disable=all
 # ATLAS configuration file
 # Directory where create_project.sh stores generated project directories
 PROJ_DIR=""
