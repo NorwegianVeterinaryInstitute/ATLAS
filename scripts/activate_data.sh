@@ -188,7 +188,7 @@ if $append; then
                 {
                     /usr/bin/printf "Appended by %s on %s\n" "$user" "$time";
                     /usr/bin/printf "Project: %s\n" "$project";
-                    /usr/bin/printf "Study: study_%s\n" "$2";
+                    /usr/bin/printf "Study: study_%s\n" "$data_dir";
                 } >> append_log.txt
 
                 /usr/bin/tail -n +2 "$csv" >> "${dest}/data.csv"
@@ -230,7 +230,7 @@ else
     {
         /usr/bin/printf "Created by %s on %s\n" "$user" "$time";
         /usr/bin/printf "Project: %s\n" "$project";
-        /usr/bin/printf "Study: study_%s\n" "$2";
+        /usr/bin/printf "Study: study_%s\n" "$data_dir";
     } >> info.txt
 
     /usr/bin/cp "$csv" data.csv

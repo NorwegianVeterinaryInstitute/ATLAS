@@ -35,7 +35,7 @@ check_tarballs() {
                 /usr/bin/printf "%s,%s\n" "$name" "$tarpath" >> missing_tarballs.csv
                 missing=1
             else
-                count=$(/usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -c "$name.*\(fastq\.gz\|fq\.gz\)$" || echo 0)
+                count=$(/usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -c "$name.*\(fastq\.gz\|fq\.gz\)$")
                 EXPECTED_READS=$((EXPECTED_READS + count))
             fi
         done
