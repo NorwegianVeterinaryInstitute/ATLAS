@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.2](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.1...v1.3.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* corrected arithmetic expansion, failed when count became 0 0 ([40892e7](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/40892e750f0fec9ab50c52f3be9cbb86f4bd7496))
+* corrected study name in generated log files in activate_data.sh ([72f917f](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/72f917fca8e5c084c22a44b42f036a44046e4107))
+
 ## [1.3.1](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.0...v1.3.1) (2026-03-09)
 
 
