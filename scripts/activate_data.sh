@@ -23,7 +23,7 @@ DESCRIPTION:
     - Extracts FASTQ files from tarballs specified in the CSV
     - Sets files to read-only (chmod 444)
     - Generates SHA512 checksums for all files
-    - Creates metadata files (info.txt, reads.csv)
+    - Creates metadata files (info.txt, data.csv)
 
     The output directory name must follow the format: project_study_YYYYMMDD
     - No underscores allowed in project or study name parts
