@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.3](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.2...v1.3.3) (2026-10-05)
+
+
+### Bug Fixes
+
+* rewrite missing_tarballs.csv on each run ([#57](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/57)) ([745f33b](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/745f33b109f5d55515ef3436feb7f254f28d4fc0))
+
 ## [1.3.2](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.1...v1.3.2) (2026-04-14)
 
 
