@@ -12,10 +12,10 @@ strip_quotes() {
 
 check_tarballs() {
     local csv_file="$1"
-    local missing=0
     EXPECTED_READS=0
     local name tarball tarpath count
     local -a tarball_array
+    local -a missing_rows=()
 
     /usr/bin/printf "Checking tarballs...\n"
 
@@ -32,8 +32,7 @@ check_tarballs() {
 
             if [[ ! -f "$tarpath" ]]; then
                 /usr/bin/printf "Error: Tarball not found: %s\n" "$tarpath" >&2
-                /usr/bin/printf "%s,%s\n" "$name" "$tarpath" >> missing_tarballs.csv
-                missing=1
+                missing_rows+=("${name},${tarpath}")
             else
                 count=$(/usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -c "$name.*\(fastq\.gz\|fq\.gz\)$")
                 EXPECTED_READS=$((EXPECTED_READS + count))
@@ -41,10 +40,13 @@ check_tarballs() {
         done
     done < <(/usr/bin/tail -n +2 "$csv_file")
 
-    if [[ "$missing" -eq 1 ]]; then
-        /usr/bin/printf "One or more tarballs are missing. Please fix and rerun.\n" >&2
+    # Rewrite the report on every run so it only lists what is missing now
+    if [[ ${#missing_rows[@]} -gt 0 ]]; then
+        /usr/bin/printf "%s\n" "${missing_rows[@]}" > missing_tarballs.csv
+        /usr/bin/printf "One or more tarballs are missing (listed in %s). Please fix and rerun.\n" "${PWD}/missing_tarballs.csv" >&2
         return 1
     fi
+    /usr/bin/rm -f missing_tarballs.csv
 }
 
 transfer_files() {
