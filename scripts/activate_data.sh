@@ -71,11 +71,11 @@ while getopts ":hac:d:p:" opt; do
             proj_name="$OPTARG"
             ;;
         :)
-            /usr/bin/printf "Option -$OPTARG requires an argument.\n" >&2
+            printf "Option -$OPTARG requires an argument.\n" >&2
             exit 1
             ;;
         \?)
-            /usr/bin/printf "Invalid option: -$OPTARG\n" >&2
+            printf "Invalid option: -$OPTARG\n" >&2
             exit 1
             ;;
     esac
@@ -83,17 +83,17 @@ done
 
 # Check for missing flags
 if [[ -z "$csvfile" ]]; then
-    /usr/bin/printf "Error: Missing required argument -c (input CSV file).\n" >&2
+    printf "Error: Missing required argument -c (input CSV file).\n" >&2
     exit 1
 fi
 
 if [[ -z "$data_dir" ]]; then
-    /usr/bin/printf "Error: Missing required argument -d (output directory name).\n" >&2
+    printf "Error: Missing required argument -d (output directory name).\n" >&2
     exit 1
 fi
 
 if [[ "$append" = true && -z "$proj_name" ]]; then
-    /usr/bin/printf "Error: Append mode requires -p (project directory name).\n" >&2
+    printf "Error: Append mode requires -p (project directory name).\n" >&2
     exit 1
 fi
 
@@ -105,7 +105,7 @@ SCRIPT_DIR="$(cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "${BASH_SO
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 [[ -f "$CONFIG_FILE" ]] || {
-    /usr/bin/printf "Config not found: %s\n" "$CONFIG_FILE" >&2
+    printf "Config not found: %s\n" "$CONFIG_FILE" >&2
     exit 1
 }
 
@@ -127,14 +127,14 @@ if [[ "$data_dir" =~ $regex ]]; then
 
     # Validate the extracted date
     if ! /usr/bin/date -d "${date_part}" +"%Y%m%d" &>/dev/null; then
-        /usr/bin/printf "Error: Invalid date. Please use a real date in YYYYMMDD format.\n"
+        printf "Error: Invalid date. Please use a real date in YYYYMMDD format.\n"
         exit 1
     fi
 else
     # This runs only if the regex didn't match at all
-    /usr/bin/printf "Error: Input must follow the format project_study_date\n"
-    /usr/bin/printf "No underscores '_' allowed in project or study name\n"
-    /usr/bin/printf "Date has to be exactly 8 digits in the YYYYMMDD format\n"
+    printf "Error: Input must follow the format project_study_date\n"
+    printf "No underscores '_' allowed in project or study name\n"
+    printf "Date has to be exactly 8 digits in the YYYYMMDD format\n"
     exit 1
 fi
 
@@ -146,39 +146,39 @@ if ! check_tarballs "$csv"; then
     exit 1
 fi
 
-/usr/bin/printf "All tarballs found.\n"
-/usr/bin/printf "Expected reads: %s\n" "$EXPECTED_READS"
+printf "All tarballs found.\n"
+printf "Expected reads: %s\n" "$EXPECTED_READS"
 
 # Split at append flag
 ## Append mode
 if $append; then
-    /usr/bin/printf "Append mode detected. This will append data to an existing study.\n"
+    printf "Append mode detected. This will append data to an existing study.\n"
     read -r -p "Continue with appending data? (y/n): " response
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
-        /usr/bin/printf "Append cancelled.\n"
+        printf "Append cancelled.\n"
         exit 1
     else
         # Check for existing directories and csv file, then run transfer
         study_dir="${PROJ_DIR}/${proj_name}/study_${data_dir}"
         if [[ -d "$dest" && -d "$study_dir" ]]; then
-            /usr/bin/printf "Data and Project directories detected. Files will be added to existing directory.\n"
+            printf "Data and Project directories detected. Files will be added to existing directory.\n"
             cd "$dest" || exit
         else
-            /usr/bin/printf "Output directories do not exist, cannot append.\n"
+            printf "Output directories do not exist, cannot append.\n"
             exit 1
         fi
-        /usr/bin/printf "Detecting existing csv file...\n"
+        printf "Detecting existing csv file...\n"
         if [[ -f "${dest}/data.csv" ]]; then
-            /usr/bin/printf "Existing csv file found. Checking for conflicts...\n"
+            printf "Existing csv file found. Checking for conflicts...\n"
             conflicts=$(find_append_conflicts "$csv" "${dest}/data.csv")
             status=$?
 
             if [[ $status -ne 0 ]]; then
-                /usr/bin/printf "Error: these sample/tarball combinations already exist:\n"
-                /usr/bin/printf '%s\n' "$conflicts"
+                printf "Error: these sample/tarball combinations already exist:\n"
+                printf '%s\n' "$conflicts"
                 exit 1
             else
-                /usr/bin/printf "No conflicts found. Appending data...\n"
+                printf "No conflicts found. Appending data...\n"
                 # Run transfer
                 transfer_files "$csv" "$append"
                 # Log the transfer
@@ -186,26 +186,26 @@ if $append; then
                 user=$(/usr/bin/whoami)
 
                 {
-                    /usr/bin/printf "Appended by %s on %s\n" "$user" "$time";
-                    /usr/bin/printf "Project: %s\n" "$project";
-                    /usr/bin/printf "Study: study_%s\n" "$data_dir";
+                    printf "Appended by %s on %s\n" "$user" "$time";
+                    printf "Project: %s\n" "$project";
+                    printf "Study: study_%s\n" "$data_dir";
                 } >> append_log.txt
 
                 /usr/bin/tail -n +2 "$csv" >> "${dest}/data.csv"
 
-                /usr/bin/printf "Copying information to study directory...\n"
+                printf "Copying information to study directory...\n"
                 /usr/bin/cp "${dest}/data.csv" "${study_dir}/data.csv"
                 /usr/bin/cp "${dest}/append_log.txt" "${study_dir}/append_log.txt"
                 /usr/bin/cp "${dest}/appended_reads.txt" "${study_dir}/appended_reads.txt"
                 /usr/bin/cp sha512sums.txt "${study_dir}/sha512sums.txt"
 
-                /usr/bin/printf "Adding symlinks...\n"
+                printf "Adding symlinks...\n"
                 /usr/bin/ln -s "${ACTIVE_DATA_DIR}/${data_dir}"/*fastq.gz "${study_dir}/data" 2>/dev/null
 
-                /usr/bin/printf "Data appended successfully!\n"
+                printf "Data appended successfully!\n"
             fi
         else
-            /usr/bin/printf "No existing csv file found. Cannot append data.\n"
+            printf "No existing csv file found. Cannot append data.\n"
             exit 1
         fi
     fi
@@ -213,10 +213,10 @@ if $append; then
 else
     # Directory check
     if [[ -d "$dest" ]]; then
-        /usr/bin/printf "Output directory already exists. Please choose a different name.\n"
+        printf "Output directory already exists. Please choose a different name.\n"
         exit 1
     else
-        /usr/bin/printf "Creating output directory.\n"
+        printf "Creating output directory.\n"
         /usr/bin/mkdir "$dest"
         cd "$dest" || exit
     fi
@@ -228,13 +228,13 @@ else
     user=$(/usr/bin/whoami)
 
     {
-        /usr/bin/printf "Created by %s on %s\n" "$user" "$time";
-        /usr/bin/printf "Project: %s\n" "$project";
-        /usr/bin/printf "Study: study_%s\n" "$data_dir";
+        printf "Created by %s on %s\n" "$user" "$time";
+        printf "Project: %s\n" "$project";
+        printf "Study: study_%s\n" "$data_dir";
     } >> info.txt
 
     /usr/bin/cp "$csv" data.csv
-    /usr/bin/printf "Data activated!\n"
+    printf "Data activated!\n"
 fi
     
 
