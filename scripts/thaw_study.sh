@@ -7,13 +7,14 @@ set -e
 # Help function
 show_help() {
     cat << EOF
-Usage: thaw_study.sh STUDY_DIR PROJECT_DIR
+Usage: thaw_study.sh -s STUDY_DIR -p PROJECT_DIR
 
 Thaw (restore) a frozen study from freezer storage.
 
 ARGUMENTS:
-    STUDY_DIR      Name of the study directory to thaw
-    PROJECT_DIR    Name of the project directory to restore the study to
+    -s STUDY_DIR      Name of the study directory to thaw
+    -p PROJECT_DIR    Name of the project directory to restore the study to
+    -h                Show this help message
 
 DESCRIPTION:
     This script performs the following operations:
@@ -29,7 +30,7 @@ DESCRIPTION:
     using the freeze_study.sh script.
 
 EXAMPLE:
-    thaw_study.sh study_mydata_20231120 myproject
+    thaw_study.sh -s study_mydata_20231120 -p myproject
 
 EOF
 }
@@ -137,7 +138,7 @@ fi
 
 ## Unpack tarball
 /usr/bin/printf "Unpacking study...\n"
-/usr/bin/cd "$proj_fullpath"
+cd "$proj_fullpath"
 /usr/bin/tar -xzf "${study_dir}.tar.gz"
 /usr/bin/printf "Thawed by %s on %s\n" "$me" "$(/usr/bin/date)" >> "${study_dir}/freeze_log.txt"
 /usr/bin/printf "%s thawed by %s on %s\n" "$study_dir" "$me" "$(/usr/bin/date)" >> "${proj_fullpath}/freeze_log.txt"
