@@ -33,7 +33,9 @@ Usage: e2e.sh [-d BASE_DIR] [-k] [-v] [-h]
 Run the ATLAS scripts end to end against dummy data in a temporary directory.
 
 ARGUMENTS:
-    -d BASE_DIR  Directory to create the test directory in (default: \$TMPDIR or /tmp)
+    -d BASE_DIR  Directory to create the test directory in (default: \$TMPDIR or /tmp).
+                 On systems where /tmp is not writable (e.g. Saga), use a
+                 directory you own: -d ~/tmp
     -k    Keep the temporary directory after the run (for inspection)
     -v    Print the output of every step, not only failing ones
     -h    Show this help message
@@ -95,7 +97,10 @@ for cmd in tar gzip rsync dos2unix sha512sum; do
 done
 
 mkdir -p "$base_dir" || { printf "Cannot create base directory: %s\n" "$base_dir" >&2; exit 1; }
-ROOT="$(mktemp -d "${base_dir}/atlas-e2e.XXXXXX")" || exit 1
+ROOT="$(mktemp -d "${base_dir}/atlas-e2e.XXXXXX")" || {
+    printf "Cannot create a test directory in %s. Use -d with a writable directory, e.g. -d ~/tmp\n" "$base_dir" >&2
+    exit 1
+}
 LOGS="${ROOT}/logs"
 
 cleanup() {
