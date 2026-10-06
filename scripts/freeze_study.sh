@@ -104,7 +104,7 @@ fi
 
 # Create study tarball
 printf "All checks passed, creating tarball and freezing...\n"
-printf "Frozen by %s on %s\n" "$me" "$(/usr/bin/date)" >> "${fullpath}/stash_log.txt"
+printf "Frozen by %s on %s\n" "$me" "$(/usr/bin/date)" >> "${fullpath}/freeze_log.txt"
 
 cd "$proj_fullpath"
 /usr/bin/tar -czf "${study_dir}.tar.gz" "$study_dir"
