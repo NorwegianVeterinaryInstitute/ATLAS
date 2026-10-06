@@ -48,11 +48,11 @@ while getopts ":hp:d:" opt; do
             study_data="$OPTARG"
             ;;
         :)
-            /usr/bin/printf "Option -%s requires an argument.\n" "$OPTARG" >&2
+            printf "Option -%s requires an argument.\n" "$OPTARG" >&2
             exit 1
             ;;
         \?)
-            /usr/bin/printf "Invalid option: -%s\n" "$OPTARG" >&2
+            printf "Invalid option: -%s\n" "$OPTARG" >&2
             exit 1
             ;;
     esac
@@ -60,12 +60,12 @@ done
 
 # Check for missing flags
 if [[ -z "$study_data" ]]; then
-    /usr/bin/printf "Error: Missing required argument -d (data directory name).\n" >&2
+    printf "Error: Missing required argument -d (data directory name).\n" >&2
     exit 1
 fi
 
 if [[ -z "$proj_name" ]]; then
-    /usr/bin/printf "Error: Missing required argument -p (project directory name).\n" >&2
+    printf "Error: Missing required argument -p (project directory name).\n" >&2
     exit 1
 fi
 
@@ -74,7 +74,7 @@ fi
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 [[ -f "$CONFIG_FILE" ]] || {
-    /usr/bin/printf "Config not found: %s\n" "$CONFIG_FILE" >&2
+    printf "Config not found: %s\n" "$CONFIG_FILE" >&2
     exit 1
 }
 
@@ -88,22 +88,22 @@ readme="${TEMPLATE_DIR}/study_readme.txt"
 
 ## Check if dirs exist
 if [[ ! -d "$dest" ]]; then
-    /usr/bin/printf "Supplied project directory does not exist.\n" >&2
+    printf "Supplied project directory does not exist.\n" >&2
     exit 1
 fi
 
 if [[ ! -d "$study_data" ]]; then
-    /usr/bin/printf "Supplied data directory does not exist.\n" >&2
+    printf "Supplied data directory does not exist.\n" >&2
     exit 1
 fi
 
 if [[ -d "$study" ]]; then
-    /usr/bin/printf "Output study directory already exists.\n" >&2
+    printf "Output study directory already exists.\n" >&2
     exit 1
 fi
 
 # Create output dir and populate
-/usr/bin/printf "Creating output directory and populating files...\n"
+printf "Creating output directory and populating files...\n"
 /usr/bin/mkdir "$study"
 /usr/bin/cp "$readme" "${study}/README.txt"
 /usr/bin/cp "${study_data}/info.txt" "${study}/data_info.txt"
@@ -111,14 +111,14 @@ fi
 /usr/bin/cp "${study_data}/sha512sums.txt" "${study}"
 /usr/bin/cp "${study_data}/transferred_reads.txt" "${study}" 
 
-/usr/bin/printf "Creating symbolic links to read files...\n"
+printf "Creating symbolic links to read files...\n"
 /usr/bin/mkdir "${study}/data"
 /usr/bin/ln -s "${study_data}"/*fastq.gz "${study}/data"
 
-/usr/bin/printf "Creating subdirectories...\n"
+printf "Creating subdirectories...\n"
 /usr/bin/mkdir "${study}/sandbox"
 /usr/bin/mkdir "${study}/results"
 /usr/bin/mkdir "${study}/scripts"
 
-/usr/bin/printf "Creation of study directory complete!\n"
-/usr/bin/printf "Make sure to fill out the README.txt file in the output directory.\n"
+printf "Creation of study directory complete!\n"
+printf "Make sure to fill out the README.txt file in the output directory.\n"

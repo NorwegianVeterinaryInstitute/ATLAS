@@ -7,7 +7,7 @@ strip_quotes() {
     # Remove leading and trailing quotes
     str="${str#\"}"
     str="${str%\"}"
-    /usr/bin/printf "%s" "$str"
+    printf "%s" "$str"
 }
 
 check_tarballs() {
@@ -17,7 +17,7 @@ check_tarballs() {
     local -a tarball_array
     local -a missing_rows=()
 
-    /usr/bin/printf "Checking tarballs...\n"
+    printf "Checking tarballs...\n"
 
     while IFS="," read -r name tarball; do
         name=$(strip_quotes "$name")
@@ -28,10 +28,10 @@ check_tarballs() {
         IFS=',' read -ra tarball_array <<< "$tarball"
 
         for tarpath in "${tarball_array[@]}"; do
-            tarpath=$(/usr/bin/printf "%s" "$tarpath" | /usr/bin/xargs)
+            tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
 
             if [[ ! -f "$tarpath" ]]; then
-                /usr/bin/printf "Error: Tarball not found: %s\n" "$tarpath" >&2
+                printf "Error: Tarball not found: %s\n" "$tarpath" >&2
                 missing_rows+=("${name},${tarpath}")
             else
                 count=$(/usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -c "$name.*\(fastq\.gz\|fq\.gz\)$")
@@ -42,8 +42,8 @@ check_tarballs() {
 
     # Rewrite the report on every run so it only lists what is missing now
     if [[ ${#missing_rows[@]} -gt 0 ]]; then
-        /usr/bin/printf "%s\n" "${missing_rows[@]}" > missing_tarballs.csv
-        /usr/bin/printf "One or more tarballs are missing (listed in %s). Please fix and rerun.\n" "${PWD}/missing_tarballs.csv" >&2
+        printf "%s\n" "${missing_rows[@]}" > missing_tarballs.csv
+        printf "One or more tarballs are missing (listed in %s). Please fix and rerun.\n" "${PWD}/missing_tarballs.csv" >&2
         return 1
     fi
     /usr/bin/rm -f missing_tarballs.csv
@@ -57,7 +57,7 @@ transfer_files() {
     local name tarball tarpath filenames i tarball_name
     local -a tarball_array
 
-    /usr/bin/printf "Transferring files...\n"
+    printf "Transferring files...\n"
 
     while IFS="," read -r name tarball; do
         name=$(strip_quotes "$name")
@@ -69,7 +69,7 @@ transfer_files() {
         sample_found=0
 
         for tarpath in "${tarball_array[@]}"; do
-            tarpath=$(/usr/bin/printf "%s" "$tarpath" | /usr/bin/xargs)
+            tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
 
             if /usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -q "$name"; then
                 sample_found=1
@@ -82,9 +82,9 @@ transfer_files() {
                     /usr/bin/chmod 444 "$base"
                     /usr/bin/sha512sum "$base" >> sha512sums.txt
                     if $append_mode; then
-                        /usr/bin/printf "%s\n" "$base" >> appended_reads.txt
+                        printf "%s\n" "$base" >> appended_reads.txt
                     else
-                        /usr/bin/printf "%s\n" "$base" >> transferred_reads.txt
+                        printf "%s\n" "$base" >> transferred_reads.txt
                     fi
                     tarball_name=$(/usr/bin/basename "$tarpath")
                     /usr/bin/rm -rf "${dest:?}/${tarball_name%.tar}"
@@ -94,25 +94,25 @@ transfer_files() {
         done
 
         if [[ $sample_found -eq 0 ]]; then
-            /usr/bin/printf "%s,%s\n" "$name" "$tarball" >> missing_samples.csv
+            printf "%s,%s\n" "$name" "$tarball" >> missing_samples.csv
         fi
 
         if [[ ${#tarball_array[@]} -gt 1 ]]; then
             for tarpath in "${tarball_array[@]}"; do
-                tarpath=$(/usr/bin/printf "%s" "$tarpath" | /usr/bin/xargs)
+                tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
                 if ! /usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -q "$name"; then
-                    /usr/bin/printf "Warning: Sample %s not found in tarball %s (but found in others)\n" "$name" "$tarpath"
-                    /usr/bin/printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv
+                    printf "Warning: Sample %s not found in tarball %s (but found in others)\n" "$name" "$tarpath"
+                    printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv
                 fi
             done
         fi
     done < <(/usr/bin/tail -n +2 "$csv_file")
 
     if [[ $loopcount -eq $EXPECTED_READS ]]; then
-        /usr/bin/printf "All files transferred.\n"
+        printf "All files transferred.\n"
     else
-        /usr/bin/printf "Warning: Expected %s reads, but found %s\n" "$EXPECTED_READS" "$loopcount"
-        /usr/bin/printf "Please check output for missing files.\n"
+        printf "Warning: Expected %s reads, but found %s\n" "$EXPECTED_READS" "$loopcount"
+        printf "Please check output for missing files.\n"
     fi
 }
 
@@ -135,7 +135,7 @@ find_append_conflicts() {
 
         IFS=',' read -ra tarball_array <<< "$tarballs"
         for tarpath in "${tarball_array[@]}"; do
-            tarpath=$(/usr/bin/printf "%s" "$tarpath" | /usr/bin/xargs)
+            tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
             key="$name|$tarpath"
             existing_pairs["$key"]=1
         done
@@ -150,11 +150,11 @@ find_append_conflicts() {
 
         IFS=',' read -ra tarball_array <<< "$tarballs"
         for tarpath in "${tarball_array[@]}"; do
-            tarpath=$(/usr/bin/printf "%s" "$tarpath" | /usr/bin/xargs)
+            tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
             key="$name|$tarpath"
 
             if [[ -n "${existing_pairs[$key]:-}" && -z "${reported_pairs[$key]:-}" ]]; then
-                /usr/bin/printf '%s,%s\n' "$name" "$tarpath"
+                printf '%s,%s\n' "$name" "$tarpath"
                 reported_pairs["$key"]=1
                 found_conflicts=1
             fi
