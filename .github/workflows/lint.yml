@@ -48,6 +48,12 @@ jobs:
             echo "Checking syntax for $script"
             bash -n "$script"
           done
+          
+      # 6 Shell builtins must not be called by path (e.g. /usr/bin/cd does nothing)
+      - name: No path-qualified shell builtins
+        run: |
+          builtins=$(compgen -b | grep -vxF -e '[' -e '.' -e ':' | paste -sd'|')
+          ! grep -nE "/(usr/)?bin/(${builtins})\b" scripts/*.sh etc/*.sh
 
   e2e:
     if: ${{ !startsWith(github.head_ref, 'release-please') }}
