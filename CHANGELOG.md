@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.4](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.3...v1.3.4) (2026-10-06)
+
+
+### Bug Fixes
+
+* corrected name of freeze log ([#68](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/68)) ([6a0fd44](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/6a0fd44fc49388fbeaee2afe7e2c3209c87c9022))
+* use builtin cd ([#61](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/61)) ([48ab6e5](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/48ab6e5dddaad962c08c31df7434d39dd8758cfc))
+
 ## [1.3.3](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.2...v1.3.3) (2026-10-05)
 
 
