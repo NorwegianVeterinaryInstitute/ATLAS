@@ -48,3 +48,21 @@ jobs:
             echo "Checking syntax for $script"
             bash -n "$script"
           done
+
+  e2e:
+    if: ${{ !startsWith(github.head_ref, 'release-please') }}
+    name: End-to-end test on dummy data
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1 Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # 2 Install script dependencies
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y dos2unix rsync
+
+      # 3 Run end-to-end test
+      - name: Run e2e test
+        run: bash tests/e2e.sh
