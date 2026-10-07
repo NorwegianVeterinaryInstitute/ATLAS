@@ -1,0 +1,53 @@
+[project]
+site_name = "ATLAS"
+site_url = "https://norwegianveterinaryinstitute.github.io/ATLAS/"
+site_description = "Automated Transfer, Logging, Archiving, and Structures"
+repo_url = "https://github.com/NorwegianVeterinaryInstitute/ATLAS"
+repo_name = "NorwegianVeterinaryInstitute/ATLAS"
+nav = [
+  { "Home" = "index.md" },
+  { "Core concepts" = "core-concepts.md" },
+  { "Installation and configuration" = "installation-and-configuration.md" },
+  { "Testing" = "testing.md" },
+  { "Scripts" = [
+    "scripts/create_project.md",
+    "scripts/activate_data.md",
+    "scripts/create_study.md",
+    "scripts/freeze_study.md",
+    "scripts/thaw_study.md",
+    "scripts/archive_study.md",
+  ] },
+  { "Saga configuration" = "saga-configuration.md" },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.code.copy",
+  "navigation.sections",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.highlight = {}
+pymdownx.superfences = {}
+# Script help is generated into build/help/ by .github/scripts/gen_help.sh before building.
+pymdownx.snippets.base_path = ["build"]
+pymdownx.snippets.check_paths = true
