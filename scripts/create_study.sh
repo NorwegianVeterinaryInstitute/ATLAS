@@ -6,7 +6,7 @@
 
 # Help function
 show_help() {
-    cat << EOF
+    cat << 'EOF'
 Usage: create_study.sh -p PROJECT_DIR -d DATA_DIR
 
 Generate study directories under a specific project directory, connected
@@ -19,7 +19,7 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script creates a study directory structure with the following:
-    - Study directory at ${PROJECT_DIR}/study_DATA_DIR
+    - Study directory at ${PROJ_DIR}/PROJECT_DIR/study_DATA_DIR
     - README.txt file
     - data_info.txt (copied from active_data)
     - data.csv (copied from active_data)

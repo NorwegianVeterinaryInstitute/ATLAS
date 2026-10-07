@@ -10,6 +10,22 @@ If you believe you found a bug, post it to the [issue tracker](https://github.co
 
 Answering questions is a great way to help. Questions can be asked either via the issue tracker or under [discussions](https://github.com/NorwegianVeterinaryInstitute/ATLAS/discussions).
 
+## Improving documentation
+
+The documentation is published at <https://norwegianveterinaryinstitute.github.io/ATLAS/>. It is built with [Zensical](https://zensical.org) from the Markdown files in `docs/`, and deployed when changes are merged to `main`.
+
+* **Script usage, flags and examples** live in the `show_help` function of each script in `scripts/`. The script pages include the output of `-h`, so edit the help text there, not in `docs/`. Use a quoted heredoc (`cat << 'EOF'`) so that `${VARS}` are printed literally.
+* **Everything else about a script** (prerequisites, output, error messages) goes in `docs/scripts/<name>.md`, around the `--8<-- "help/<name>.txt"` line.
+* **General pages** are the other `.md` files in `docs/`, and images go in `docs/img/`. Link between pages with relative paths to the `.md` files.
+* **New pages** must be added to `nav` in `zensical.toml`. A new script needs its own page in `docs/scripts/` and a `-h` flag that works without a config file.
+
+To preview the site locally (with [uv](https://docs.astral.sh/uv/)):
+
+```bash
+bash .github/scripts/gen_help.sh
+uvx zensical serve
+```
+
 ## Making pull requests
 
 Before opening a pull request (PR), please file an issue and describe the problem in some detail. For an enhancement, explain how the change makes things better for users. For a bug fix, explain the bug and how the fix removes it. This upfront work opens a conversation that often leads to a better fix.

@@ -5,7 +5,7 @@
 
 # Help function
 show_help() {
-    cat << EOF
+    cat << 'EOF'
 Usage: create_project.sh -p PROJECT_NAME
 
 Create a project directory in the ${PROJ_DIR} directory.
@@ -25,8 +25,8 @@ DESCRIPTION:
     - If no project number is available, use other informative info instead
 
 EXAMPLE:
-    create_project.sh 12345_MyProject
-    create_project.sh VetInst_BacterialGenomics
+    create_project.sh -p 12345_MyProject
+    create_project.sh -p VetInst_BacterialGenomics
 
 EOF
 }
