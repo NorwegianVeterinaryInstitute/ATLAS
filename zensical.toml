@@ -8,6 +8,7 @@ nav = [
   { "Home" = "index.md" },
   { "Core concepts" = "core-concepts.md" },
   { "Installation and configuration" = "installation-and-configuration.md" },
+  { "Saga configuration" = "saga-configuration.md" },
   { "Testing" = "testing.md" },
   { "Scripts" = [
     "scripts/create_project.md",
@@ -17,7 +18,6 @@ nav = [
     "scripts/thaw_study.md",
     "scripts/archive_study.md",
   ] },
-  { "Saga configuration" = "saga-configuration.md" },
 ]
 
 [project.theme]
