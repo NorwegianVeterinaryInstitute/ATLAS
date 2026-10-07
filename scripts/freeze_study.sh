@@ -14,6 +14,7 @@ Freeze a study by creating a tarball and transferring it to the freeze directory
 ARGUMENTS:
     -s STUDY_DIR      Name of the study directory to freeze
     -p PROJECT_DIR    Name of the project directory containing the study
+    -h                Show this help message
 
 DESCRIPTION:
     This script performs the following operations:

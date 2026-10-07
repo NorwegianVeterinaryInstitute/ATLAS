@@ -5,7 +5,7 @@
 # Help function
 show_help() {
     cat << EOF
-Usage: activate_data.sh -c INPUT_CSV -d OUTPUT_DIR -p PROJECT_NAME -a
+Usage: activate_data.sh -c INPUT_CSV -d OUTPUT_DIR [-a -p PROJECT_NAME]
 
 Transfer data from tarball path to ACTIVE_DATA_DIR.
 
