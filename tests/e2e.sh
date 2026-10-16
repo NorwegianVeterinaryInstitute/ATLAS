@@ -41,7 +41,7 @@ ARGUMENTS:
     -h    Show this help message
 
 REQUIREMENTS:
-    bash, tar, gzip, rsync, dos2unix, sha512sum in /usr/bin
+    The tools checked by scripts/check_dependencies.sh
     Run as a non-root user (root ignores the read-only file permissions
     that the test checks).
 
@@ -91,10 +91,11 @@ if [[ "$EUID" -eq 0 ]]; then
     exit 1
 fi
 
-# The ATLAS scripts call these tools by absolute path, so check /usr/bin
-for cmd in tar gzip rsync dos2unix sha512sum; do
-    [[ -x "/usr/bin/${cmd}" ]] || { printf "Missing dependency: /usr/bin/%s\n" "$cmd" >&2; exit 1; }
-done
+# Stop early if a tool the ATLAS scripts need is missing
+if ! deps_out="$(bash "${SCRIPTS}/check_dependencies.sh" 2>&1)"; then
+    printf "%s\n" "$deps_out" >&2
+    exit 1
+fi
 
 mkdir -p "$base_dir" || { printf "Cannot create base directory: %s\n" "$base_dir" >&2; exit 1; }
 ROOT="$(mktemp -d "${base_dir}/atlas-e2e.XXXXXX")" || {
@@ -219,6 +220,14 @@ STUDY2="study_${DS2}"
 
 # Tests
 printf "ATLAS end-to-end test\nWorking in %s\n" "$ROOT"
+
+# Dependency check: a script calling a tool that does not exist
+printf "\ncheck_dependencies.sh\n"
+mkdir -p "${ROOT}/depcheck"
+cp "${SCRIPTS}/check_dependencies.sh" "${ROOT}/depcheck/"
+printf '#!/bin/bash\n/usr/bin/atlas-no-such-tool\n' > "${ROOT}/depcheck/fake_script.sh"
+step "fails on missing tool" 1 "" bash "${ROOT}/depcheck/check_dependencies.sh"
+check "lists missing tool" bash -c "bash '${ROOT}/depcheck/check_dependencies.sh' | grep -q 'missing  */usr/bin/atlas-no-such-tool'"
 
 # Project creation: name validation, template copy, no overwrite
 printf "\ncreate_project.sh\n"
