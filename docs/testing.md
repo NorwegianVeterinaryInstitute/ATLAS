@@ -14,6 +14,6 @@ tests/e2e.sh -v             # print the output of every step
 !!! danger "Caution"
     On systems where /tmp is not writable (e.g. Saga), use a directory you own: -d ~/tmp
 
-Requirements: `bash`, `tar`, `gzip`, `rsync`, `dos2unix` and `sha512sum`. The scripts call these tools by absolute path (`/usr/bin/...`), so they must be installed there.
+Requirements: the tools checked by [`check_dependencies.sh`](scripts/check_dependencies.md). The test runs it first and stops if a tool is missing.
 
 The script exits with status 1 if any step fails, and prints the failing step's output. It also runs in CI, on the same triggers as the lint job.
