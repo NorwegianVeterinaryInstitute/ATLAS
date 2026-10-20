@@ -71,11 +71,11 @@ while getopts ":hac:d:p:" opt; do
             proj_name="$OPTARG"
             ;;
         :)
-            printf "Option -$OPTARG requires an argument.\n" >&2
+            printf "Option -%s requires an argument.\n" "$OPTARG" >&2
             exit 1
             ;;
         \?)
-            printf "Invalid option: -$OPTARG\n" >&2
+            printf "Invalid option: -%s\n" "$OPTARG" >&2
             exit 1
             ;;
     esac
