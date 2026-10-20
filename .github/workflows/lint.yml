@@ -3,10 +3,9 @@ name: Shell Lint and Syntax Check
 on:
   push:
     branches:
-      - dev
+      - main
   pull_request:
     branches:
-      - dev
       - main
 
 jobs:
@@ -48,7 +47,7 @@ jobs:
             echo "Checking syntax for $script"
             bash -n "$script"
           done
-          
+
       # 6 Shell builtins must not be called by path (e.g. /usr/bin/cd does nothing)
       - name: No path-qualified shell builtins
         run: |
