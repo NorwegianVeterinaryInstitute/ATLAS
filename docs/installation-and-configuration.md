@@ -14,6 +14,25 @@ Additionally, the following dependencies are required:
 - `sha512sum` >= v8.32
 - `dos2unix` >= v7.4.2
 
+- `gzip`
+
+## How external tools are called
+The scripts call external tools by absolute path, for example `/usr/bin/tar`, `/usr/bin/rsync` and `/usr/bin/sha512sum`, not by name. Bash builtins (`cd`, `printf`, `read`, …) are called by name.
+
+This means:
+
+- **Your `PATH` is mostly ignored.** Aliases, shell functions, or other versions of a tool earlier in your `PATH` (your own `bin` directory, conda environments, environment modules) are not used. A script runs the same tools, whatever the user's shell setup. The exception is `gzip`: `tar` starts it by name when creating or extracting `.tar.gz` files, so it is found through `PATH`.
+- **The tools must be installed in `/usr/bin`.** This holds on most Linux distributions, including Saga. On systems that keep them elsewhere (macOS, NixOS, some HPC module setups) the scripts fail with "No such file or directory", even if the tool is installed and on your `PATH`.
+
+## Checking dependencies
+Run `check_dependencies.sh` to check that a system has every tool the scripts use, in the expected location and version:
+
+```
+scripts/check_dependencies.sh
+```
+
+It lists each tool with its status and exits with an error if any is missing or too old. The list is read from the scripts themselves, so it stays up to date when a script starts using a new tool.
+
 # Configuration
 ATLAS' paths and variables are set with a configuration file. The scripts assume this file is located in `$HOME/.config/atlas/config.sh`. Users can also set an alternative path by setting an `XDG_CONFIG_HOME` variable, pointing to a directory containing `atlas/config.sh`. An example config file can be found in the `etc` directory in this GitHub repository.
 The file must contain values for the following variables:
