@@ -17,6 +17,7 @@ nav = [
     "scripts/freeze_study.md",
     "scripts/thaw_study.md",
     "scripts/archive_study.md",
+    "scripts/check_dependencies.md",
   ] },
 ]
 
