@@ -114,7 +114,10 @@ source "$CONFIG_FILE"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/lib.sh"
 
-csv=$(/usr/bin/realpath "$csvfile")
+if [[ ! -f "$csvfile" ]]; then
+    printf "Error: CSV file not found: %s\n" "$csvfile" >&2
+    exit 1
+fi
 dest="${ACTIVE_DATA_DIR}/${data_dir}"
 
 ## Check for output directory name structure
@@ -138,11 +141,16 @@ else
     exit 1
 fi
 
-# Convert line endings to Unix format
-/usr/bin/dos2unix -q "$csv"
+# Read the CSV into memory with Unix line endings, leaving the user's file
+# untouched. $(...) drops trailing newlines; csv_rows adds exactly one back,
+# so every copy ends with a newline even if the file did not.
+csv_data=$(/usr/bin/dos2unix < "$csvfile")
+csv_rows() {
+    printf "%s\n" "$csv_data"
+}
 
 # Check tarball presence
-if ! check_tarballs "$csv"; then
+if ! check_tarballs <(csv_rows); then
     exit 1
 fi
 
@@ -170,7 +178,7 @@ if $append; then
         printf "Detecting existing csv file...\n"
         if [[ -f "${dest}/data.csv" ]]; then
             printf "Existing csv file found. Checking for conflicts...\n"
-            conflicts=$(find_append_conflicts "$csv" "${dest}/data.csv")
+            conflicts=$(find_append_conflicts <(csv_rows) "${dest}/data.csv")
             status=$?
 
             if [[ $status -ne 0 ]]; then
@@ -180,7 +188,7 @@ if $append; then
             else
                 printf "No conflicts found. Appending data...\n"
                 # Run transfer
-                transfer_files "$csv" "$append"
+                transfer_files <(csv_rows) "$append"
                 # Log the transfer
                 time=$(/usr/bin/date)
                 user=$(/usr/bin/whoami)
@@ -191,7 +199,7 @@ if $append; then
                     printf "Study: study_%s\n" "$data_dir";
                 } >> append_log.txt
 
-                /usr/bin/tail -n +2 "$csv" >> "${dest}/data.csv"
+                csv_rows | /usr/bin/tail -n +2 >> "${dest}/data.csv"
 
                 printf "Copying information to study directory...\n"
                 /usr/bin/cp "${dest}/data.csv" "${study_dir}/data.csv"
@@ -221,7 +229,7 @@ else
         cd "$dest" || exit
     fi
     # Transfer files
-    transfer_files "$csv" "$append"
+    transfer_files <(csv_rows) "$append"
     
     # Create note file in subproject
     time=$(/usr/bin/date)
@@ -233,7 +241,7 @@ else
         printf "Study: study_%s\n" "$data_dir";
     } >> info.txt
 
-    /usr/bin/cp "$csv" data.csv
+    csv_rows > data.csv
     printf "Data activated!\n"
 fi
     
