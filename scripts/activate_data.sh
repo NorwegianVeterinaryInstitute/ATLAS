@@ -44,7 +44,7 @@ DESCRIPTION:
     data to the existing directory and update the data.csv file.
 
 EXAMPLE:
-    activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -a
+    activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -p 12345_MyProj -a
 
 EOF
 }

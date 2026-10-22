@@ -9,7 +9,7 @@ show_help() {
     cat << EOF
 Usage: freeze_study.sh -s STUDY_DIR -p PROJECT_DIR
 
-Freeze a study by creating a tarball and transferring it to the freeze directory.
+Freeze a study by creating a tarball and transferring it to FREEZE_DIR.
 
 ARGUMENTS:
     -s STUDY_DIR      Name of the study directory to freeze
