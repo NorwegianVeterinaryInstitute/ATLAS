@@ -140,15 +140,17 @@ EOF
 printf "Project README template\n" > "${TEMPLATE_DIR}/project_readme.txt"
 printf "Study README template\n" > "${TEMPLATE_DIR}/study_readme.txt"
 
-## Dummy tarballs: <run>.tar containing <run>/<sample>_R{1,2}.fastq.gz
+## Dummy tarballs: <run>.tar containing <run>/<sample>_R{1,2}.<READ_EXT>,
+## where READ_EXT defaults to fastq.gz.
 ## run1: sampleA, sampleB. run2: sampleC. run3: sampleD.
+## run5: sampleE, sampleF as .fq.gz (#71).
 make_tarball() {
     local run="$1"; shift
     local sample
     mkdir -p "${RAW_DIR}/${run}"
     for sample in "$@"; do
-        printf "@%s_read1\nACGTACGTAC\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R1.fastq.gz"
-        printf "@%s_read1\nTGCATGCATG\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R2.fastq.gz"
+        printf "@%s_read1\nACGTACGTAC\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R1.${READ_EXT:-fastq.gz}"
+        printf "@%s_read1\nTGCATGCATG\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R2.${READ_EXT:-fastq.gz}"
     done
     tar -cf "${RAW_DIR}/${run}.tar" -C "$RAW_DIR" "$run"
     rm -rf "${RAW_DIR:?}/${run}"
@@ -157,6 +159,7 @@ make_tarball() {
 make_tarball run1 sampleA sampleB
 make_tarball run2 sampleC
 make_tarball run3 sampleD
+READ_EXT=fq.gz make_tarball run5 sampleE sampleF
 
 ## Input CSVs. sampleB is quoted to test quote stripping; missing.csv points
 ## at a tarball that does not exist.
@@ -174,6 +177,8 @@ printf 'sample,tarball\nsampleX,%s\n' "${RAW_DIR}/missing.tar" > "${ROOT}/missin
 printf 'sample,tarball\r\nsampleA,%s\r\nsampleB,%s' \
     "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_newline.csv"
 cp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
+printf 'sample,tarball\nsampleE,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq.csv"
+printf 'sample,tarball\nsampleF,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq_append.csv"
 
 # Test helpers
 pass=0
@@ -228,6 +233,8 @@ STUDY1="study_${DS1}"
 STUDY2="study_${DS2}"
 DS3="TestProj_nonewline_20240117"
 STUDY3="study_${DS3}"
+DS4="TestProj_fqreads_20240119"
+STUDY4="study_${DS4}"
 
 # Tests
 printf "ATLAS end-to-end test\nWorking in %s\n" "$ROOT"
@@ -284,6 +291,11 @@ check "study subdirs created" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}/sandbox" -a
 check "4 data symlinks" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 4
 step "creates study two" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS2"
 step "creates study three" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS3"
+## Study four holds only .fq.gz reads (#71)
+step "activates .fq.gz reads" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/fq.csv" -d "$DS4"
+step "creates study four" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS4"
+check "2 .fq.gz data symlinks" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 2
+check "no literal glob link" test ! -L "${PROJ_DIR}/${PROJ}/${STUDY4}/data/*fastq.gz"
 step "refuses existing study" 1 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS1"
 
 # Append to an existing study: prompt, conflict check, new reads linked
@@ -298,6 +310,8 @@ check "data.csv has 3 samples" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY1}
 ## appended row must start on its own line, not be glued to the last one
 step "appends to study from CSV without newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/study1_append.csv" -d "$DS3"
 check "data.csv has 3 samples on separate lines" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY3}/data.csv" | grep -c .)" -eq 3
+step "appends .fq.gz reads" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/fq_append.csv" -d "$DS4"
+check "4 .fq.gz data symlinks after append" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 4
 
 # Freeze: study packed into the freezer, study and active data removed
 printf "\nfreeze_study.sh\n"

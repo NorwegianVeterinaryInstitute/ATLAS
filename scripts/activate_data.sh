@@ -231,7 +231,10 @@ if $append; then
                 /usr/bin/cp sha512sums.txt "${study_dir}/sha512sums.txt"
 
                 printf "Adding symlinks...\n"
-                /usr/bin/ln -s "${ACTIVE_DATA_DIR}/${data_dir}"/*fastq.gz "${study_dir}/data" 2>/dev/null
+                if ! link_reads "${ACTIVE_DATA_DIR}/${data_dir}" "${study_dir}/data"; then
+                    printf "Error: Could not link all read files into %s\n" "${study_dir}/data" >&2
+                    exit 1
+                fi
 
                 printf "Data appended successfully!\n"
             fi
