@@ -19,7 +19,7 @@ check_tarballs() {
 
     printf "Checking tarballs...\n"
 
-    while IFS="," read -r name tarball; do
+    while IFS="," read -r name tarball || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarball=$(strip_quotes "$tarball")
 
@@ -59,7 +59,7 @@ transfer_files() {
 
     printf "Transferring files...\n"
 
-    while IFS="," read -r name tarball; do
+    while IFS="," read -r name tarball || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarball=$(strip_quotes "$tarball")
 
@@ -127,7 +127,7 @@ find_append_conflicts() {
     declare -A reported_pairs=()
 
     # Read existing CSV
-    while IFS=',' read -r name tarballs; do
+    while IFS=',' read -r name tarballs || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarballs=$(strip_quotes "$tarballs")
 
@@ -142,7 +142,7 @@ find_append_conflicts() {
     done < <(/usr/bin/tail -n +2 "$existing_csv")
 
     # Check input CSV against existing CSV
-    while IFS=',' read -r name tarballs; do
+    while IFS=',' read -r name tarballs || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarballs=$(strip_quotes "$tarballs")
 
