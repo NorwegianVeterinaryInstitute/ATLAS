@@ -97,15 +97,14 @@ if [[ ! -d "$proj_fullpath" ]]; then
     exit 1
 fi
 
-## Check if study exists in freezer
+## Check if study already exists in project directory
 if [[ -d "$fullpath" ]]; then
     printf "Study already thawed. Please verify name of the study.\n" >&2
     exit 1
 fi
 
 # Thaw study
-printf "All checks passed, creating tarball and thawing...\n"
-printf "Thawing tarball and transferring to Saga...\n"
+printf "All checks passed, transferring to project directory and thawing...\n"
 
 ## Get checksum before transfer
 hash_pre=$(/usr/bin/sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')
@@ -137,7 +136,6 @@ else
 fi
 
 ## Unpack tarball
-printf "Unpacking study...\n"
 cd "$proj_fullpath"
 
 /usr/bin/tar -xzf "${study_dir}.tar.gz"

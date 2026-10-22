@@ -1,14 +1,13 @@
 #!/bin/bash
 
-# Script used to create a project directory in the
-# nn9305k/projects directory
+# Script used to create a project directory in $PROJ_DIR
 
 # Help function
 show_help() {
     cat << 'EOF'
 Usage: create_project.sh -p PROJECT_NAME
 
-Create a project directory in the ${PROJ_DIR} directory.
+Create a project directory in the PROJ_DIR directory.
 
 ARGUMENTS:
     -p PROJECT_NAME   Name of the project in format: projectNumber_projectName
@@ -16,7 +15,7 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script creates a new project directory with the following:
-    - Project directory at ${PROJ_DIR}/PROJECT_NAME
+    - Project directory at PROJ_DIR/PROJECT_NAME
     - creation.txt file with timestamp and creator information
     - README.txt template file
 
@@ -26,7 +25,7 @@ DESCRIPTION:
 
 EXAMPLE:
     create_project.sh -p 12345_MyProject
-    create_project.sh -p VetInst_BacterialGenomics
+    create_project.sh -p Lab_BacterialGenomics
 
 EOF
 }

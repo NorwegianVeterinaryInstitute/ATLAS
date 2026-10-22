@@ -23,7 +23,7 @@ DESCRIPTION:
     - Extracts FASTQ files from tarballs specified in the CSV
     - Sets files to read-only (chmod 444)
     - Generates SHA512 checksums for all files
-    - Creates metadata files (info.txt, reads.csv)
+    - Creates metadata files (info.txt, data.csv)
 
     The output directory name must follow the format: project_study_YYYYMMDD
     - No underscores allowed in project or study name parts
@@ -44,7 +44,7 @@ DESCRIPTION:
     data to the existing directory and update the data.csv file.
 
 EXAMPLE:
-    activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -a
+    activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -p 12345_MyProj -a
 
 EOF
 }
@@ -71,11 +71,11 @@ while getopts ":hac:d:p:" opt; do
             proj_name="$OPTARG"
             ;;
         :)
-            printf "Option -$OPTARG requires an argument.\n" >&2
+            printf "Option -%s requires an argument.\n" "$OPTARG" >&2
             exit 1
             ;;
         \?)
-            printf "Invalid option: -$OPTARG\n" >&2
+            printf "Invalid option: -%s\n" "$OPTARG" >&2
             exit 1
             ;;
     esac

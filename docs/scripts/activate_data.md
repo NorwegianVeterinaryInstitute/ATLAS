@@ -5,6 +5,7 @@ The script is used to activate data for analysis, or in other words, transferrin
 
 ## When to use
 Use this script to populate an active data directory for a study, either:
+
 - Initial activation (new output directory, before using `create_study.sh`)
 - Append mode (`-a`) to add new data to an existing study/data directory pair
 
@@ -15,6 +16,7 @@ Use this script to populate an active data directory for a study, either:
 
 ## Naming Rules (`-d`)
 `OUTPUT_DIR` must follow:
+
 - `<project_study_YYYYMMDD>`
 - Project and study parts may contain letters, numbers, and hyphen
 - No underscores inside project/study parts
@@ -30,6 +32,7 @@ The input csv is expected to have two columns with headers. Header names are irr
 `sample_name,path/to/tarball.tar`
 
 Supported patterns:
+
 - Quoted or unquoted fields
 - Multiple tarballs in second field, comma separated and under one quote
 - Empty lines
@@ -45,18 +48,20 @@ sample1,/path/to/tarball1.tar
 If several tarballs are present on the same line, the respective sampleID will be searched for in all tarballs on that line.
 
 ## Prerequisites
+
 - Config file must exist at:
-  - `${ATLAS_CONFIG}`, or
-  - `${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh`
+    - `${ATLAS_CONFIG}`, or
+    - `${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh`
 - Config file should define at least:
-  - `ACTIVE_DATA_DIR`
-  - `PROJ_DIR`
+    - `ACTIVE_DATA_DIR`
+    - `PROJ_DIR`
 - `lib.sh` must exist and is sourceable
 - Required external tools are available (`tar`,`dos2unix`,`sha512sum`, etc.)
 
 ## Output
 ### Non-append mode
 Creates `${ACTIVE_DATA_DIR}/{OUTPUT_DIR}` and populates:
+
 - `fastq.gz`/`fq.gz` files: The actual read files extracted from the tarballs
 - `sha512sums.txt`: sha512sum-values for all read files
 - `transferred_reads.txt`: A list of the reads transferred
@@ -66,6 +71,7 @@ Creates `${ACTIVE_DATA_DIR}/{OUTPUT_DIR}` and populates:
 
 ### Append mode
 Updates existing active/study directories and adds:
+
 - New `fastq.gz`/`fq.gz` files
 - Updated `sha512sums.txt`
 - `appended_reads.txt`: A list of the appended reads
@@ -77,15 +83,16 @@ And copies updated files to the connected study directory at:
 `${PROJ_DIR}/${PROJECT_NAME}/study_${OUTPUT_DIR}`
 
 ## Error Messages
+
 - Error: Missing required argument <flag>...
-  - Missing required argument to the respective flag.
+    - Missing required argument to the respective flag.
 - Error: Append mode requires `-p`...
-  - `-a` used without `-p`
+    - `-a` used without `-p`
 - Config not found: <path>
-  - Config file not found at resolved location.
+    - Config file not found at resolved location.
 - Error: Invalid date...
-  - Date part of `-d` is not a real `YYYYMMDD`.
+    - Date part of `-d` is not a real `YYYYMMDD`.
 - Output directories do not exist, cannot append
-  - Append mode target paths missing.
+    - Append mode target paths missing.
 - Error: these sample/tarball combinations already exist:...
-  - Append input conflicts with existing data.csv.
+    - Append input conflicts with existing data.csv.
