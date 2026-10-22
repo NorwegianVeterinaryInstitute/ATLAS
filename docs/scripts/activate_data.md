@@ -28,14 +28,19 @@ Regex used:
 ```
 
 ## Input CSV
-The input csv is expected to have two columns with headers. Header names are irrelevant. Expected columns:
-`sample_name,path/to/tarball.tar`
+The input csv has two columns:
+`sample_name,/path/to/tarball.tar`
+
+Tarballs must be uncompressed and named `*.tar`.
+
+A header line is optional, and its column names are free. The first line is treated as a header when its second field does not end in `.tar`; the script prints the line it skips. The input file itself is never changed.
 
 Supported patterns:
 
 - Quoted or unquoted fields
 - Multiple tarballs in second field, comma separated and under one quote
 - Empty lines
+- Windows (CRLF) line endings and a missing newline after the last line
 
 Examples:
 
@@ -66,7 +71,7 @@ Creates `${ACTIVE_DATA_DIR}/{OUTPUT_DIR}` and populates:
 - `sha512sums.txt`: sha512sum-values for all read files
 - `transferred_reads.txt`: A list of the reads transferred
 - `info.txt`: Who activated the data and when
-- `data.csv`: A copy of the input csv file
+- `data.csv`: The samples from the input csv, with the header `sample,tarball`
 - `missing_samples.csv`: A list of samples not found the tarball(s)
 
 ### Append mode
@@ -88,6 +93,10 @@ And copies updated files to the connected study directory at:
     - Missing required argument to the respective flag.
 - Error: Append mode requires `-p`...
     - `-a` used without `-p`
+- Error: CSV file not found: <path>
+    - The file given with `-c` does not exist.
+- Error: No samples found in CSV file: <path>
+    - The CSV is empty, or holds only a header or empty lines.
 - Config not found: <path>
     - Config file not found at resolved location.
 - Error: Invalid date...

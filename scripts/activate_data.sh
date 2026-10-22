@@ -31,7 +31,12 @@ DESCRIPTION:
     - Date must be a valid date
 
     CSV format: sample_name,/path/to/tarball.tar
-    
+
+    Tarballs must be uncompressed and named *.tar.
+
+    A header line is optional and its column names are free. The first line is
+    treated as a header when its second field does not end in .tar.
+
     The CSV file can contain:
     - Quoted or unquoted fields: sample1,/path/to/tarball.tar OR "sample1","/path/to/tarball.tar"
     - Multiple tarballs per line: "sample1","/path/to/tarball1.tar,/path/to/tarball2.tar"
@@ -145,8 +150,26 @@ fi
 # untouched. $(...) drops trailing newlines; csv_rows adds exactly one back,
 # so every copy ends with a newline even if the file did not.
 csv_data=$(/usr/bin/dos2unix < "$csvfile")
+
+# The header is optional. Line 1 is a data row if its tarball field ends in
+# .tar, otherwise it is a header and dropped. csv_rows always puts a fixed
+# header first, so the readers in lib.sh can keep skipping line 1.
+IFS="," read -r _ first_tarball <<< "$csv_data"
+first_tarball=$(strip_quotes "$first_tarball" | /usr/bin/xargs)
+if [[ -n "$csv_data" && "$first_tarball" != *.tar ]]; then
+    printf "Header detected, skipping: %s\n" "${csv_data%%$'\n'*}"
+    csv_data=$(printf "%s\n" "$csv_data" | /usr/bin/tail -n +2)
+fi
+
+# Rows like "","" are skipped by the readers, so they do not count
+if ! printf "%s\n" "$csv_data" | /usr/bin/grep -q '[^,"[:space:]]'; then
+    printf "Error: No samples found in CSV file: %s\n" "$csvfile" >&2
+    exit 1
+fi
+
 csv_rows() {
-    printf "%s\n" "$csv_data"
+    printf "sample,tarball\n"
+    [[ -n "$csv_data" ]] && printf "%s\n" "$csv_data"
 }
 
 # Check tarball presence
