@@ -11,6 +11,7 @@ nav = [
   { "Example setup: Saga" = "saga-configuration.md" },
   { "Testing" = "testing.md" },
   { "Scripts" = [
+    "scripts/atlas.md",
     "scripts/create_project.md",
     "scripts/activate_data.md",
     "scripts/create_study.md",

@@ -229,6 +229,17 @@ printf '#!/bin/bash\n/usr/bin/atlas-no-such-tool\n' > "${ROOT}/depcheck/fake_scr
 step "fails on missing tool" 1 "" bash "${ROOT}/depcheck/check_dependencies.sh"
 check "lists missing tool" bash -c "bash '${ROOT}/depcheck/check_dependencies.sh' | grep -q 'missing  */usr/bin/atlas-no-such-tool'"
 
+# Dispatcher: help, unknown command, argument passing
+printf "\natlas.sh\n"
+step "shows help" 0 "" bash "${SCRIPTS}/atlas.sh" -h
+step "fails without command" 1 "" bash "${SCRIPTS}/atlas.sh"
+step "rejects unknown command" 1 "" bash "${SCRIPTS}/atlas.sh" no_such_command
+step "passes -h to command" 0 "" bash "${SCRIPTS}/atlas.sh" create_project -h
+step "passes exit status of command" 1 "" bash "${SCRIPTS}/atlas.sh" create_project -p BadName
+mkdir -p "${ROOT}/bin"
+ln -s "${SCRIPTS}/atlas.sh" "${ROOT}/bin/atlas"
+step "runs command through a link" 0 "" bash "${ROOT}/bin/atlas" check_dependencies
+
 # Project creation: name validation, template copy, no overwrite
 printf "\ncreate_project.sh\n"
 step "rejects name without underscore" 1 "" bash "${SCRIPTS}/create_project.sh" -p BadName

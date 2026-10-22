@@ -7,7 +7,8 @@ set -e
 # Help function
 show_help() {
     cat << EOF
-Usage: freeze_study.sh -s STUDY_DIR -p PROJECT_DIR
+Usage: atlas freeze_study -s STUDY_DIR -p PROJECT_DIR
+       freeze_study.sh -s STUDY_DIR -p PROJECT_DIR
 
 Freeze a study by creating a tarball and transferring it to FREEZE_DIR.
 
@@ -29,7 +30,7 @@ DESCRIPTION:
     The study can be restored later using the thaw_study.sh script.
 
 EXAMPLE:
-    freeze_study.sh -s study_mydata_20231120 -p myproject
+    atlas freeze_study -s study_mydata_20231120 -p myproject
 
 EOF
 }
