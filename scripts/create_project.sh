@@ -25,7 +25,7 @@ DESCRIPTION:
 
 EXAMPLE:
     create_project.sh -p 12345_MyProject
-    create_project.sh -p VetInst_BacterialGenomics
+    create_project.sh -p Lab_BacterialGenomics
 
 EOF
 }
