@@ -165,6 +165,9 @@ printf 'sample,tarball\nsampleA,%s\n"sampleB","%s"\n' \
 printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run2.tar" > "${ROOT}/study1_append.csv"
 printf 'sample,tarball\nsampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/study2.csv"
 printf 'sample,tarball\nsampleX,%s\n' "${RAW_DIR}/missing.tar" > "${ROOT}/missing.csv"
+## No newline after the last row, as Excel or a text editor may save it (#70)
+printf 'sample,tarball\nsampleA,%s\nsampleB,%s' \
+    "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_newline.csv"
 
 # Test helpers
 pass=0
@@ -253,6 +256,8 @@ check "sha512sums verify" bash -c "cd '${ACTIVE_DATA_DIR}/${DS1}' && sha512sum -
 check "tarball scratch dir removed" test ! -d "${ACTIVE_DATA_DIR}/${DS1}/run1"
 step "refuses existing output dir" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/study1.csv" -d "$DS1"
 step "activates study two" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/study2.csv" -d "$DS2"
+step "activates CSV without trailing newline" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_newline.csv" -d TestProj_nonewline_20240117
+check "last row of CSV not dropped (4 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_nonewline_20240117" '*.fastq.gz')" -eq 4
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"
