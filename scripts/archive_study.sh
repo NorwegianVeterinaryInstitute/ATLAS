@@ -5,14 +5,14 @@ set -e
 # Script for archiving studies.
 # The script will create a tarball of the
 # study directory, and transfer the
-# tarball to the correct location on NIRD.
+# tarball to the archive directory.
 
 # Help function
 show_help() {
     cat << EOF
 Usage: archive_study.sh -s STUDY_DIR -p PROJECT_DIR
 
-Archive a study by creating a tarball and transferring it to NIRD storage.
+Archive a study by creating a tarball and transferring it to the archive directory.
 
 ARGUMENTS:
     -s STUDY_DIR      Name of the study directory to archive
@@ -27,7 +27,7 @@ DESCRIPTION:
     - Verifies that results and data directories are present
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
-    - Transfers the archive to NIRD (/nird/datalake/NS9305K/study_archive)
+    - Transfers the archive to the archive directory ($ARCHIVE_DIR)
     - Verifies checksums before and after transfer
     - Removes the original study and data directories after successful archiving
     - Logs the archiving operation
@@ -178,7 +178,7 @@ printf "Creating checksum of archive...\n"
 hash_pre="$(/usr/bin/sha512sum "${study_dir}.tar.gz" | awk '{print $1}')"
 
 # Transfer tarball to storage
-printf "Moving archive to NIRD...\n"
+printf "Moving archive to the archive directory...\n"
 rsync_err_file="$("/usr/bin/mktemp")"
 
 if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "$ARCHIVE_DIR" 2> "$rsync_err_file"; then

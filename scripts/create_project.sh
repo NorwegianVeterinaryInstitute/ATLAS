@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Script used to create a project directory in the
-# nn9305k/projects directory
+# Script used to create a project directory in $PROJ_DIR
 
 # Help function
 show_help() {

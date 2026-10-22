@@ -105,7 +105,7 @@ fi
 
 # Thaw study
 printf "All checks passed, creating tarball and thawing...\n"
-printf "Thawing tarball and transferring to Saga...\n"
+printf "Thawing tarball and transferring to project directory...\n"
 
 ## Get checksum before transfer
 hash_pre=$(/usr/bin/sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')
