@@ -12,7 +12,7 @@ show_help() {
     cat << EOF
 Usage: archive_study.sh -s STUDY_DIR -p PROJECT_DIR
 
-Archive a study by creating a tarball and transferring it to the archive directory.
+Archive a study by creating a tarball and transferring it to ARCHIVE_DIR.
 
 ARGUMENTS:
     -s STUDY_DIR      Name of the study directory to archive
@@ -22,12 +22,12 @@ ARGUMENTS:
 DESCRIPTION:
     This script performs the following operations:
     - Checks if the study directory exists and meets requirements
-    - Warns if directory size exceeds 250GB
+    - Warns if directory size exceeds ARCHIVE_SIZE_THRESHOLD_GB
     - Verifies that sandbox directory has been removed
     - Verifies that results and data directories are present
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
-    - Transfers the archive to the archive directory ($ARCHIVE_DIR)
+    - Transfers the archive to the archive directory (ARCHIVE_DIR)
     - Verifies checksums before and after transfer
     - Removes the original study and data directories after successful archiving
     - Logs the archiving operation
