@@ -163,8 +163,17 @@ make_tarball run3 sampleD
 printf 'sample,tarball\nsampleA,%s\n"sampleB","%s"\n' \
     "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/study1.csv"
 printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run2.tar" > "${ROOT}/study1_append.csv"
-printf 'sample,tarball\nsampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/study2.csv"
+## study2.csv has its own header names, headerless.csv has none (#77)
+printf 'Sample ID,Tarball path\nsampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/study2.csv"
+printf 'sampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/headerless.csv"
+printf 'sample,tarball\n"",""\n' > "${ROOT}/no_samples.csv"
 printf 'sample,tarball\nsampleX,%s\n' "${RAW_DIR}/missing.tar" > "${ROOT}/missing.csv"
+## Saved as Excel or a text editor may save it: CRLF line endings and no
+## newline after the last row (#70). The copy checks that the input file is
+## left untouched (#81).
+printf 'sample,tarball\r\nsampleA,%s\r\nsampleB,%s' \
+    "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_newline.csv"
+cp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
 
 # Test helpers
 pass=0
@@ -217,6 +226,8 @@ DS1="TestProj_studyone_20240115"
 DS2="TestProj_studytwo_20240116"
 STUDY1="study_${DS1}"
 STUDY2="study_${DS2}"
+DS3="TestProj_nonewline_20240117"
+STUDY3="study_${DS3}"
 
 # Tests
 printf "ATLAS end-to-end test\nWorking in %s\n" "$ROOT"
@@ -253,6 +264,17 @@ check "sha512sums verify" bash -c "cd '${ACTIVE_DATA_DIR}/${DS1}' && sha512sum -
 check "tarball scratch dir removed" test ! -d "${ACTIVE_DATA_DIR}/${DS1}/run1"
 step "refuses existing output dir" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/study1.csv" -d "$DS1"
 step "activates study two" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/study2.csv" -d "$DS2"
+check "custom header skipped (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS2}" '*.fastq.gz')" -eq 2
+step "activates CSV without header" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/headerless.csv" -d TestProj_noheader_20240118
+check "first row of headerless CSV kept (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_noheader_20240118" '*.fastq.gz')" -eq 2
+check "data.csv gets the standard header" test "$(head -n 1 "${ACTIVE_DATA_DIR}/TestProj_noheader_20240118/data.csv")" = "sample,tarball"
+step "fails on missing CSV" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/nope.csv" -d TestProj_nocsv_20240101
+check "no output dir for missing CSV" test ! -d "${ACTIVE_DATA_DIR}/TestProj_nocsv_20240101"
+step "fails on CSV without samples" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_samples.csv" -d TestProj_nosamples_20240101
+check "no output dir for CSV without samples" test ! -d "${ACTIVE_DATA_DIR}/TestProj_nosamples_20240101"
+step "activates CSV without trailing newline" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_newline.csv" -d "$DS3"
+check "last row of CSV not dropped (4 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS3}" '*.fastq.gz')" -eq 4
+check "input CSV left untouched" cmp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"
@@ -261,6 +283,7 @@ step "creates study one" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$
 check "study subdirs created" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}/sandbox" -a -d "${PROJ_DIR}/${PROJ}/${STUDY1}/results" -a -d "${PROJ_DIR}/${PROJ}/${STUDY1}/scripts"
 check "4 data symlinks" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 4
 step "creates study two" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS2"
+step "creates study three" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS3"
 step "refuses existing study" 1 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS1"
 
 # Append to an existing study: prompt, conflict check, new reads linked
@@ -271,6 +294,10 @@ step "appends sampleC" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" 
 check "6 fastq files in active data" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "6 data symlinks in study" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 6
 check "data.csv has 3 samples" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" | grep -c .)" -eq 3
+## Study three was activated from a CSV without a trailing newline: the
+## appended row must start on its own line, not be glued to the last one
+step "appends to study from CSV without newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/study1_append.csv" -d "$DS3"
+check "data.csv has 3 samples on separate lines" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY3}/data.csv" | grep -c .)" -eq 3
 
 # Freeze: study packed into the freezer, study and active data removed
 printf "\nfreeze_study.sh\n"

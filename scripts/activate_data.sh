@@ -31,7 +31,12 @@ DESCRIPTION:
     - Date must be a valid date
 
     CSV format: sample_name,/path/to/tarball.tar
-    
+
+    Tarballs must be uncompressed and named *.tar.
+
+    A header line is optional and its column names are free. The first line is
+    treated as a header when its second field does not end in .tar.
+
     The CSV file can contain:
     - Quoted or unquoted fields: sample1,/path/to/tarball.tar OR "sample1","/path/to/tarball.tar"
     - Multiple tarballs per line: "sample1","/path/to/tarball1.tar,/path/to/tarball2.tar"
@@ -114,7 +119,10 @@ source "$CONFIG_FILE"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/lib.sh"
 
-csv=$(/usr/bin/realpath "$csvfile")
+if [[ ! -f "$csvfile" ]]; then
+    printf "Error: CSV file not found: %s\n" "$csvfile" >&2
+    exit 1
+fi
 dest="${ACTIVE_DATA_DIR}/${data_dir}"
 
 ## Check for output directory name structure
@@ -138,11 +146,34 @@ else
     exit 1
 fi
 
-# Convert line endings to Unix format
-/usr/bin/dos2unix -q "$csv"
+# Read the CSV into memory with Unix line endings, leaving the user's file
+# untouched. $(...) drops trailing newlines; csv_rows adds exactly one back,
+# so every copy ends with a newline even if the file did not.
+csv_data=$(/usr/bin/dos2unix < "$csvfile")
+
+# The header is optional. Line 1 is a data row if its tarball field ends in
+# .tar, otherwise it is a header and dropped. csv_rows always puts a fixed
+# header first, so the readers in lib.sh can keep skipping line 1.
+IFS="," read -r _ first_tarball <<< "$csv_data"
+first_tarball=$(strip_quotes "$first_tarball" | /usr/bin/xargs)
+if [[ -n "$csv_data" && "$first_tarball" != *.tar ]]; then
+    printf "Header detected, skipping: %s\n" "${csv_data%%$'\n'*}"
+    csv_data=$(printf "%s\n" "$csv_data" | /usr/bin/tail -n +2)
+fi
+
+# Rows like "","" are skipped by the readers, so they do not count
+if ! printf "%s\n" "$csv_data" | /usr/bin/grep -q '[^,"[:space:]]'; then
+    printf "Error: No samples found in CSV file: %s\n" "$csvfile" >&2
+    exit 1
+fi
+
+csv_rows() {
+    printf "sample,tarball\n"
+    [[ -n "$csv_data" ]] && printf "%s\n" "$csv_data"
+}
 
 # Check tarball presence
-if ! check_tarballs "$csv"; then
+if ! check_tarballs <(csv_rows); then
     exit 1
 fi
 
@@ -170,7 +201,7 @@ if $append; then
         printf "Detecting existing csv file...\n"
         if [[ -f "${dest}/data.csv" ]]; then
             printf "Existing csv file found. Checking for conflicts...\n"
-            conflicts=$(find_append_conflicts "$csv" "${dest}/data.csv")
+            conflicts=$(find_append_conflicts <(csv_rows) "${dest}/data.csv")
             status=$?
 
             if [[ $status -ne 0 ]]; then
@@ -180,7 +211,7 @@ if $append; then
             else
                 printf "No conflicts found. Appending data...\n"
                 # Run transfer
-                transfer_files "$csv" "$append"
+                transfer_files <(csv_rows) "$append"
                 # Log the transfer
                 time=$(/usr/bin/date)
                 user=$(/usr/bin/whoami)
@@ -191,7 +222,7 @@ if $append; then
                     printf "Study: study_%s\n" "$data_dir";
                 } >> append_log.txt
 
-                /usr/bin/tail -n +2 "$csv" >> "${dest}/data.csv"
+                csv_rows | /usr/bin/tail -n +2 >> "${dest}/data.csv"
 
                 printf "Copying information to study directory...\n"
                 /usr/bin/cp "${dest}/data.csv" "${study_dir}/data.csv"
@@ -221,7 +252,7 @@ else
         cd "$dest" || exit
     fi
     # Transfer files
-    transfer_files "$csv" "$append"
+    transfer_files <(csv_rows) "$append"
     
     # Create note file in subproject
     time=$(/usr/bin/date)
@@ -233,7 +264,7 @@ else
         printf "Study: study_%s\n" "$data_dir";
     } >> info.txt
 
-    /usr/bin/cp "$csv" data.csv
+    csv_rows > data.csv
     printf "Data activated!\n"
 fi
     
