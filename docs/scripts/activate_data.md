@@ -95,9 +95,8 @@ Creates `${ACTIVE_DATA_DIR}/{OUTPUT_DIR}` and populates:
 - `transferred_reads.txt`: A list of the reads transferred
 - `info.txt`: Who activated the data and when
 - `data.csv`: The samples from the input csv, with the header `sample,tarball`
-- `missing_samples.csv`: A list of samples not found in the tarball(s)
 
-If a sample is not found or a read cannot be extracted, the script stops before writing `info.txt` and `data.csv`. Remove the output directory and rerun once the problem is fixed.
+Every sample must have reads in its tarball(s); this is checked before the output directory is created. If a read still cannot be extracted, the script removes the output directory it created, so you can fix the problem and rerun.
 
 ### Append mode
 Updates existing active/study directories and adds:
@@ -107,7 +106,8 @@ Updates existing active/study directories and adds:
 - `appended_reads.txt`: A list of the appended reads
 - `append_log.txt`: Who appended the data and when
 - Updated `data.csv`
-- Updated `missing_samples.csv`, if relevant
+
+The reads are extracted into a temporary `.append_in_progress` directory inside the active data directory and moved into place only when all of them were extracted. If the append fails, the active data directory and the study are left as they were.
 
 And copies updated files to the connected study directory at:
 `${PROJ_DIR}/${PROJECT_NAME}/study_${OUTPUT_DIR}`
@@ -133,6 +133,8 @@ And copies updated files to the connected study directory at:
 - Error: these read files would overwrite each other or existing reads:...
     - Two reads share a file name (from two tarballs, two directories in one tarball, or a sample name contained in another), or, in append mode, a read is already in the output directory. Nothing is changed.
 - Error: Sample <name> not found in <tarball>
-    - The sample has no reads in the tarball. Listed in `missing_samples.csv`; the script stops.
+    - The sample has no reads in its tarball(s): check the sample name. Nothing is changed.
 - Error: Expected N reads, but transferred M
-    - Some reads were not extracted. Earlier errors give the cause.
+    - Some reads were not extracted. Earlier errors give the cause. Nothing is kept: a new output directory is removed, and an append leaves the existing directory unchanged.
+- Error: Could not create .../.append_in_progress...
+    - An earlier append was interrupted. Remove that directory and rerun.
