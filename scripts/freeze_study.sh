@@ -18,7 +18,8 @@ ARGUMENTS:
 
 DESCRIPTION:
     This script performs the following operations:
-    - Checks if the study directory exists
+    - Checks if the study directory and FREEZE_DIR exist
+    - Checks that the source tarballs in the study's data.csv still exist
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
     - Transfers the archive to the freeze directory (FREEZE_DIR)
@@ -27,6 +28,10 @@ DESCRIPTION:
     - Logs the freezing operation
 
     The study can be restored later using the thaw_study.sh script.
+
+    The frozen study holds links to the reads, not the reads themselves.
+    Thawing extracts the reads again from the source tarballs listed in
+    data.csv, so those must stay where they are.
 
 EXAMPLE:
     freeze_study.sh -s study_mydata_20231120 -p myproject
@@ -70,6 +75,8 @@ if [[ -z "$study_dir" ]]; then
 fi
 
 # Get input and set variables
+## Get script dir
+SCRIPT_DIR="$(cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "${BASH_SOURCE[0]}")")" && pwd -P)"
 ## Get config variables
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
@@ -80,6 +87,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/lib.sh"
 
 me=$(/usr/bin/whoami)
 proj_fullpath="${PROJ_DIR}/${proj_name}"
@@ -97,9 +106,25 @@ if [[ ! -d "$fullpath" ]]; then
     exit 1
 fi
 
+## Without this check, rsync would create a file named after the directory
+if [[ ! -d "$FREEZE_DIR" ]]; then
+    printf "Freeze directory does not exist: %s\n" "$FREEZE_DIR" >&2
+    exit 1
+fi
+
 ## Check if study exists in freezer
 if [[ -f "${FREEZE_DIR}/${study_dir}.tar.gz" ]]; then
     printf "Study already frozen. Please verify name of the study.\n" >&2
+    exit 1
+fi
+
+## Thawing extracts the reads again from the source tarballs
+if [[ ! -f "${fullpath}/data.csv" ]]; then
+    printf "Error: %s not found; cannot check the source tarballs.\n" "${fullpath}/data.csv" >&2
+    exit 1
+fi
+if ! check_tarballs "${fullpath}/data.csv"; then
+    printf "Thawing needs the source tarballs. Not freezing.\n" >&2
     exit 1
 fi
 
@@ -129,7 +154,7 @@ printf "Moving archive to freeze directory...\n"
 
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "$FREEZE_DIR" 2> "$rsync_err_file"; then
+if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "${FREEZE_DIR}/" 2> "$rsync_err_file"; then
     rm -f "${rsync_err_file:?}"
 else
     status=$?

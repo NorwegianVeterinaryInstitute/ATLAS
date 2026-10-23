@@ -43,6 +43,8 @@ Use this script when you need a frozen study available again for analysis or arc
     - Project path under PROJ_DIR not found.
 - Study already thawed. Please verify name of the study.
     - Study directory already exists in project.
+- Frozen study not found: ...
+    - No tarball for the study in `FREEZE_DIR`.
 - rsync failed with exit code X
     - Transfer failed; stderr output is printed.
 - Error: Checksums not equal. Please check files manually.

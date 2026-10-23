@@ -192,6 +192,11 @@ printf 'sample,tarball\nsampleF,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq_append
 printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
     "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
 
+## Configs with a missing freezer or archive directory (#72). Later
+## assignments win.
+{ cat "$ATLAS_CONFIG"; printf 'FREEZE_DIR="%s"\n' "${ROOT}/no_freezer"; } > "${ROOT}/config_no_freezer.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_DIR="%s"\n' "${ROOT}/no_archive"; } > "${ROOT}/config_no_archive.sh"
+
 # Test helpers
 pass=0
 fail=0
@@ -331,8 +336,15 @@ check "data.csv has 3 samples on separate lines" test "$(tail -n +2 "${PROJ_DIR}
 step "appends .fq.gz reads" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/fq_append.csv" -d "$DS4"
 check "4 .fq.gz data symlinks after append" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 4
 
-# Freeze: study packed into the freezer, study and active data removed
+# Freeze: checks, study packed into the freezer, study and active data
+# removed
 printf "\nfreeze_study.sh\n"
+mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
+step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
+check "study kept when source tarball missing" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+step "refuses missing freezer dir" 1 "" env ATLAS_CONFIG="${ROOT}/config_no_freezer.sh" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "no file created at freezer path" test ! -e "${ROOT}/no_freezer"
 step "freezes study one" 0 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 check "tarball in freezer" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "study dir removed" test ! -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
@@ -345,8 +357,10 @@ check "study dir restored" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data restored (6 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "freezer tarball removed" test ! -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 
-# Archive: prompt, sandbox refusal, tarball in archive, cleanup, log
+# Archive: checks, prompt, sandbox refusal, tarball in archive, cleanup, log
 printf "\narchive_study.sh\n"
+step "refuses missing archive dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_archive.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "no file created at archive path" test ! -e "${ROOT}/no_archive"
 step "archive cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 step "refuses while sandbox present" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 
