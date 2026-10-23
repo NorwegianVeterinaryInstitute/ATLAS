@@ -7,19 +7,21 @@ set -e
 # Help function
 show_help() {
     cat << EOF
-Usage: freeze_study.sh -s STUDY_DIR -p PROJECT_DIR
+Usage: freeze_study.sh -s STUDY_DIR -p PROJECT_DIR [-y]
 
 Freeze a study by creating a tarball and transferring it to FREEZE_DIR.
 
 ARGUMENTS:
     -s STUDY_DIR      Name of the study directory to freeze
     -p PROJECT_DIR    Name of the project directory containing the study
+    -y                Do not ask for confirmation (for scripted use)
     -h                Show this help message
 
 DESCRIPTION:
     This script performs the following operations:
     - Checks if the study directory and FREEZE_DIR exist
     - Checks that the source tarballs in the study's data.csv still exist
+    - Asks for confirmation, unless -y is given
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
     - Transfers the archive to the freeze directory (FREEZE_DIR)
@@ -40,11 +42,16 @@ EOF
 }
 
 # Define flags
-while getopts ":hs:p:" opt; do
+assume_yes=false
+
+while getopts ":hys:p:" opt; do
     case "$opt" in
         h)
             show_help
             exit 0
+            ;;
+        y)
+            assume_yes=true
             ;;
         s)
             study_dir="$OPTARG"
@@ -128,9 +135,34 @@ if ! check_tarballs "${fullpath}/data.csv"; then
     exit 1
 fi
 
+## Prompt user for freeze confirmation
+if ! $assume_yes; then
+    printf "You are about to freeze the study '%s' from project '%s' to %s.\n" "$study_dir" "$proj_name" "$FREEZE_DIR"
+    printf "The study and its active data will be deleted afterwards.\n"
+    read -r -p "Start the freezing process? (y/n): " response
+    if [[ "$response" != "y" && "$response" != "Y" ]]; then
+        printf "Freezing cancelled.\n"
+        exit 1
+    fi
+fi
+
 # Create study tarball
 printf "All checks passed, creating tarball and freezing...\n"
-printf "Frozen by %s on %s\n" "$me" "$(/usr/bin/date)" >> "${fullpath}/freeze_log.txt"
+## The entry ends up in the tarball. If the freeze fails, take it out again.
+freeze_log="${fullpath}/freeze_log.txt"
+had_freeze_log=false
+if [[ -f "$freeze_log" ]]; then
+    had_freeze_log=true
+fi
+undo_freeze_log() {
+    if $had_freeze_log; then
+        /usr/bin/sed -i '$d' "$freeze_log"
+    else
+        /usr/bin/rm -f "$freeze_log"
+    fi
+}
+printf "Frozen by %s on %s\n" "$me" "$(/usr/bin/date)" >> "$freeze_log"
+trap undo_freeze_log EXIT
 
 cd "$proj_fullpath"
 /usr/bin/tar -czf "${study_dir}.tar.gz" "$study_dir"
@@ -179,9 +211,10 @@ else
 fi
 
 # Log the freezing and cleanup
+trap - EXIT
 printf "Logging the freezing and cleaning up files...\n"
 printf "%s frozen by %s on %s\n" "$study_dir" "$me" "$(/usr/bin/date)" >> "${proj_fullpath}/freeze_log.txt"
-printf "%s\t%s\t%s\t%s\n" "$PROJ_DIR" "$study_dir" "$me" "$(/usr/bin/date)" >> "${FREEZE_DIR}/freeze_log.txt"
+printf "%s\t%s\t%s\t%s\n" "$proj_name" "$study_dir" "$me" "$(/usr/bin/date)" >> "${FREEZE_DIR}/freeze_log.txt"
 /usr/bin/rm -rf "${fullpath:?}"
 /usr/bin/rm -f "${fullpath:?}.tar.gz"
 /usr/bin/rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"

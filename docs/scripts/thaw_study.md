@@ -3,6 +3,8 @@
 ## Purpose
 Restore a previously frozen study from freezer storage back into a project directory, verify transfer integrity, reconstitute active data, and validate read checksums. Reconstituted data validation depends on consistent `data.csv` and `sha512sums.txt` contents across freeze/thaw lifecycle.
 
+The reads are extracted again from the source tarballs listed in the study's `data.csv`. The tarball in `FREEZE_DIR` is removed, and the thaw logged, only after the restored reads match their checksums. If restoring fails, the frozen copy is kept: fix the problem, remove the unpacked study directory (and the active data directory, if one was created) and rerun.
+
 ## When to use
 Use this script when you need a frozen study available again for analysis or archiving.
 
@@ -45,6 +47,8 @@ Use this script when you need a frozen study available again for analysis or arc
     - Study directory already exists in project.
 - Frozen study not found: ...
     - No tarball for the study in `FREEZE_DIR`.
+- Error: Could not restore the study data. The frozen study is kept at ...
+    - `activate_data.sh` failed, for example because a source tarball has moved.
 - rsync failed with exit code X
     - Transfer failed; stderr output is printed.
 - Error: Checksums not equal. Please check files manually.

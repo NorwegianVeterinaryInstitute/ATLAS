@@ -27,7 +27,12 @@ DESCRIPTION:
     - Logs the thawing operation
 
     This script is used to restore studies that were previously frozen
-    using the freeze_study.sh script.
+    using the freeze_study.sh script. The reads are extracted again from
+    the source tarballs listed in the study's data.csv.
+
+    If restoring the data fails, the tarball stays in the freezer. Fix the
+    problem, remove the unpacked study directory (and the active data
+    directory, if one was created) and rerun.
 
 EXAMPLE:
     thaw_study.sh -s study_mydata_20231120 -p myproject
@@ -144,25 +149,31 @@ fi
 cd "$proj_fullpath"
 
 /usr/bin/tar -xzf "${study_dir}.tar.gz"
-printf "Thawed by %s on %s\n" "$me" "$(/usr/bin/date)" >> "${study_dir}/freeze_log.txt"
-printf "%s thawed by %s on %s\n" "$study_dir" "$me" "$(/usr/bin/date)" >> "${proj_fullpath}/freeze_log.txt"
-
-## Cleanup
-/usr/bin/rm -f "${FREEZE_DIR:?}/${study_dir}.tar.gz"
+## The copy in the freezer stays until the data is verified
 /usr/bin/rm -f "${study_dir:?}.tar.gz"
-printf "%s\t%s\t%s\t%s\n" "$proj_name" "$study_dir" "$me" "$(/usr/bin/date)" >> "${FREEZE_DIR}/thaw_log.txt"
 
 # Reconstitute study data
 printf "Reconstituting study data...\n"
-(/usr/bin/bash "${SCRIPT_DIR}/activate_data.sh" -c "${fullpath}/data.csv" -d "${study_dir##study_}")
+if ! /usr/bin/bash "${SCRIPT_DIR}/activate_data.sh" -c "${fullpath}/data.csv" -d "${study_dir##study_}"; then
+    printf "Error: Could not restore the study data. The frozen study is kept at %s.\n" "${FREEZE_DIR}/${study_dir}.tar.gz" >&2
+    printf "Fix the problem, remove %s and rerun.\n" "$fullpath" >&2
+    exit 1
+fi
 
 printf "Comparing sha512sums...\n"
 test=$( /usr/bin/grep -Fxvf "${ACTIVE_DATA_DIR}/${study_dir##study_}/sha512sums.txt" "${fullpath}/sha512sums.txt" || true )
 
-if [[ ! -z "${test}" ]]; then
+if [[ -n "${test}" ]]; then
     printf "sha512sums not equal, please check the following reads:\n"
     printf "%s\n" "$test"
+    printf "The frozen study is kept at %s.\n" "${FREEZE_DIR}/${study_dir}.tar.gz"
     exit 1
-else
-    printf "sha512sum equal, thawing done!\n"
 fi
+
+## Log and cleanup
+printf "Thawed by %s on %s\n" "$me" "$(/usr/bin/date)" >> "${fullpath}/freeze_log.txt"
+printf "%s thawed by %s on %s\n" "$study_dir" "$me" "$(/usr/bin/date)" >> "${proj_fullpath}/freeze_log.txt"
+printf "%s\t%s\t%s\t%s\n" "$proj_name" "$study_dir" "$me" "$(/usr/bin/date)" >> "${FREEZE_DIR}/thaw_log.txt"
+/usr/bin/rm -f "${FREEZE_DIR:?}/${study_dir}.tar.gz"
+
+printf "sha512sum equal, thawing done!\n"

@@ -119,6 +119,12 @@ if [[ ! -d "$ARCHIVE_DIR" ]]; then
     exit 1
 fi
 
+threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
+if [[ ! "$threshold" =~ ^[0-9]+$ ]]; then
+    printf "Error: ARCHIVE_SIZE_THRESHOLD_GB must be a whole number of GB, not '%s'.\n" "$threshold" >&2
+    exit 1
+fi
+
 ## Prompt user for archive process confirmation
 printf "You are about to archive the study '%s' from project '%s' to %s.\n" "$study_dir" "$proj_name" "$ARCHIVE_DIR"
 read -r -p "Start the archiving process? (y/n): " response
@@ -131,8 +137,6 @@ fi
 size_kb=$(/usr/bin/du -s "$fullpath" | /usr/bin/awk '{print $1}')
 size_mb=$((size_kb / 1024))
 size_gb=$((size_mb / 1024))
-
-threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
 
 if (( size_gb > threshold )); then
     printf "Warning: Experiment directory '%s' is very large (~%dGB).\n" "$study_dir" "$size_gb"
