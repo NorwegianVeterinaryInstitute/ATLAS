@@ -228,6 +228,11 @@ step() {
     fi
 }
 
+# Path of the log written by the last step, to check its messages
+last_log() {
+    printf "%s/%02d.log" "$LOGS" "$step_no"
+}
+
 # check DESCRIPTION TEST-EXPRESSION...
 # The command's own output is discarded; only ok/FAIL is printed.
 check() {
@@ -397,8 +402,11 @@ check "thaw logged" grep -q "$STUDY1" "${FREEZE_DIR}/thaw_log.txt"
 printf "\narchive_study.sh\n"
 step "refuses missing archive dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_archive.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 check "no file created at archive path" test ! -e "${ROOT}/no_archive"
+## The study still has sandbox/, which also exits 1: check the message
 step "rejects non-numeric size threshold" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_bad_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "non-numeric threshold reported" grep -q "must be a whole number" "$(last_log)"
 step "rejects size threshold with leading zero" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_octal_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "leading-zero threshold reported" grep -q "must be a whole number" "$(last_log)"
 step "archive cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 step "refuses while sandbox present" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 
