@@ -157,6 +157,16 @@ make_tarball() {
 make_tarball run1 sampleA sampleB
 make_tarball run2 sampleC
 make_tarball run3 sampleD
+## run4 tests sample name matching (#69). Its group name has a space, as in
+## tarballs made on a domain-joined machine, which used to shift the columns
+## of `tar -tvf`. s.1 must not match sX1 (no regex); sample1 matches sample10
+## (substring matching is deliberate); "my sample" has a space in its name.
+mkdir -p "${RAW_DIR}/run4"
+for sample in s.1 sX1 sample1 sample10 "my sample"; do
+    printf "@r\nACGT\n+\nIIII\n" | gzip > "${RAW_DIR}/run4/${sample}_R1.fastq.gz"
+done
+tar -cf "${RAW_DIR}/run4.tar" --owner=atlas:1000 --group='domain users:100' -C "$RAW_DIR" run4
+rm -rf "${RAW_DIR:?}/run4"
 
 ## Input CSVs. sampleB is quoted to test quote stripping; missing.csv points
 ## at a tarball that does not exist.
@@ -174,6 +184,8 @@ printf 'sample,tarball\nsampleX,%s\n' "${RAW_DIR}/missing.tar" > "${ROOT}/missin
 printf 'sample,tarball\r\nsampleA,%s\r\nsampleB,%s' \
     "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_newline.csv"
 cp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
+printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
+    "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
 
 # Test helpers
 pass=0
@@ -275,6 +287,12 @@ check "no output dir for CSV without samples" test ! -d "${ACTIVE_DATA_DIR}/Test
 step "activates CSV without trailing newline" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_newline.csv" -d "$DS3"
 check "last row of CSV not dropped (4 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS3}" '*.fastq.gz')" -eq 4
 check "input CSV left untouched" cmp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
+DSM="${ACTIVE_DATA_DIR}/TestProj_matching_20240117"
+step "activates tarball with spaces in group" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/matching.csv" -d TestProj_matching_20240117
+check "matching reads extracted (4 fastq)" test "$(count_files "$DSM" '*.fastq.gz')" -eq 4
+check "dot in sample name matched literally" test -f "${DSM}/s.1_R1.fastq.gz" -a ! -e "${DSM}/sX1_R1.fastq.gz"
+check "sample name matched as substring" test -f "${DSM}/sample10_R1.fastq.gz"
+check "read file name with space extracted" test -f "${DSM}/my sample_R1.fastq.gz"
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"

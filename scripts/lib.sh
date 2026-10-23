@@ -10,6 +10,25 @@ strip_quotes() {
     printf "%s" "$str"
 }
 
+# Print the read files in a tarball that belong to a sample, one per line.
+# A read belongs to the sample when its file name (not its directory)
+# contains the sample name. This substring match is deliberate: users pick
+# how specific the sample name is (sample1 or sample1_L001) and must keep
+# names unambiguous within a tarball. tar -tf lists names only, so owner or
+# group names with spaces do not shift any columns.
+list_reads() {
+    local tarpath="$1"
+    local name="$2"
+    local f base
+
+    /usr/bin/tar -tf "$tarpath" 2>/dev/null | while IFS= read -r f; do
+        base="${f##*/}"
+        if [[ "$base" == *"$name"* && "$base" =~ \.(fastq|fq)\.gz$ ]]; then
+            printf "%s\n" "$f"
+        fi
+    done
+}
+
 check_tarballs() {
     local csv_file="$1"
     EXPECTED_READS=0
@@ -34,7 +53,7 @@ check_tarballs() {
                 printf "Error: Tarball not found: %s\n" "$tarpath" >&2
                 missing_rows+=("${name},${tarpath}")
             else
-                count=$(/usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -c "$name.*\(fastq\.gz\|fq\.gz\)$")
+                count=$(list_reads "$tarpath" "$name" | /usr/bin/grep -c .)
                 EXPECTED_READS=$((EXPECTED_READS + count))
             fi
         done
@@ -54,7 +73,7 @@ transfer_files() {
     local append_mode="$2"
     local loopcount=0
     local sample_found
-    local name tarball tarpath filenames i tarball_name
+    local name tarball tarpath reads i tarball_name
     local -a tarball_array
 
     printf "Transferring files...\n"
@@ -71,11 +90,11 @@ transfer_files() {
         for tarpath in "${tarball_array[@]}"; do
             tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
 
-            if /usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -q "$name"; then
+            reads=$(list_reads "$tarpath" "$name")
+            if [[ -n "$reads" ]]; then
                 sample_found=1
-                filenames=$(/usr/bin/tar -tvf "$tarpath" | /usr/bin/grep "$name" | /usr/bin/grep -E 'fastq\.gz$|fq\.gz$' | /usr/bin/awk '{print $6}')
 
-                for i in $filenames; do
+                while IFS= read -r i; do
                     /usr/bin/tar -xf "$tarpath" "$i"
                     base=$(/usr/bin/basename "$i")
                     /usr/bin/mv "$i" .
@@ -89,7 +108,7 @@ transfer_files() {
                     tarball_name=$(/usr/bin/basename "$tarpath")
                     /usr/bin/rm -rf "${dest:?}/${tarball_name%.tar}"
                     ((loopcount++))
-                done
+                done <<< "$reads"
             fi
         done
 
@@ -100,7 +119,7 @@ transfer_files() {
         if [[ ${#tarball_array[@]} -gt 1 ]]; then
             for tarpath in "${tarball_array[@]}"; do
                 tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
-                if ! /usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -q "$name"; then
+                if [[ -z "$(list_reads "$tarpath" "$name")" ]]; then
                     printf "Warning: Sample %s not found in tarball %s (but found in others)\n" "$name" "$tarpath"
                     printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv
                 fi

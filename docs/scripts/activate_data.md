@@ -52,6 +52,29 @@ sample1,/path/to/tarball1.tar
 
 If several tarballs are present on the same line, the respective sampleID will be searched for in all tarballs on that line.
 
+## Sample name matching
+A read file (`*.fastq.gz` or `*.fq.gz`) is taken for a sample when its file name contains the sample name anywhere. Directory names inside the tarball are ignored, and characters such as `.`, `+` or `[` in the sample name are matched literally.
+
+This lets you choose how specific a sample name is, but you are responsible for keeping names unambiguous within a tarball. For example, with this tarball:
+
+```
+tarball1.tar
+- sample1_L001_R1.fastq.gz
+- sample1_L001_R2.fastq.gz
+- sample1_L002_R1.fastq.gz
+- sample1_L002_R2.fastq.gz
+- sample10_L001_R1.fastq.gz
+- sample10_L001_R2.fastq.gz
+```
+
+the sample name `sample1` matches the `sample10` reads too. Use a more specific name, such as `sample1_L001`, with one line per lane:
+
+```
+sample1_L001,/path/to/tarball1.tar
+sample1_L002,/path/to/tarball1.tar
+sample10_L001,/path/to/tarball1.tar
+```
+
 ## Prerequisites
 
 - Config file must exist at:
