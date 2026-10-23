@@ -348,6 +348,19 @@ check "no staging dir left after append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/.a
 step "append refuses sample not in tarball" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/no_sample_append.csv" -d "$DS1"
 check "no reads added for refused append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/sampleD_R1.fastq.gz"
 check "data.csv unchanged after refused append" test "$(tail -n +2 "${ACTIVE_DATA_DIR}/${DS1}/data.csv" | grep -c .)" -eq 3
+## A list that cannot be written fails the append after data.csv and
+## sha512sums.txt were already appended to: those appends and the moved
+## reads must be undone
+chmod 444 "${ACTIVE_DATA_DIR}/${DS1}/appended_reads.txt"
+step "append fails when a list is read-only" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/headerless.csv" -d "$DS1"
+chmod 644 "${ACTIVE_DATA_DIR}/${DS1}/appended_reads.txt"
+check "append failed on the read-only list" grep -q "Could not update .*appended_reads.txt" "${LOGS}/$(printf "%02d" "$step_no").log"
+check "undo reported complete" grep -q "Nothing was changed" "${LOGS}/$(printf "%02d" "$step_no").log"
+check "undo left the read-only list alone" bash -c "! grep -q 'truncate' '${LOGS}/$(printf "%02d" "$step_no").log'"
+check "reads removed after failed append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/sampleD_R1.fastq.gz"
+check "data.csv restored after failed append" test "$(tail -n +2 "${ACTIVE_DATA_DIR}/${DS1}/data.csv" | grep -c .)" -eq 3
+check "checksums restored after failed append" test "$(grep -c . "${ACTIVE_DATA_DIR}/${DS1}/sha512sums.txt")" -eq 6
+check "no staging dir left after failed append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/.append_in_progress"
 step "append rejects reads already in study" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/clash_append.csv" -d "$DS1"
 check "still 6 checksums after refused append" test "$(grep -c . "${ACTIVE_DATA_DIR}/${DS1}/sha512sums.txt")" -eq 6
 ## Study three was activated from a CSV without a trailing newline: the
@@ -364,6 +377,14 @@ mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
 step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
 check "study kept when source tarball missing" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+## A data.csv row whose sample has no reads, as studies activated before
+## #78 can have: the study could not be thawed, so freeze refuses it
+cp "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" "${ROOT}/study1_data.orig"
+printf 'sampleZ,%s\n' "${RAW_DIR}/run1.tar" >> "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv"
+step "refuses data.csv sample without reads" 1 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "freeze reports the sample" grep -q "Sample sampleZ not found" "${LOGS}/$(printf "%02d" "$step_no").log"
+check "nothing frozen for sample without reads" test ! -e "${FREEZE_DIR}/${STUDY1}.tar.gz"
+mv "${ROOT}/study1_data.orig" "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv"
 step "refuses missing freezer dir" 1 "" env ATLAS_CONFIG="${ROOT}/config_no_freezer.sh" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 check "no file created at freezer path" test ! -e "${ROOT}/no_freezer"
 step "freezes study one" 0 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
@@ -387,6 +408,14 @@ step "refuses while sandbox present" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" 
 
 # Setup, not a test: archiving refuses while sandbox/ exists
 rmdir "${PROJ_DIR}/${PROJ}/${STUDY2}/sandbox"
+## Without sandbox/, only the tarball check can refuse this data.csv row
+cp "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv" "${ROOT}/study2_data.orig"
+printf 'sampleZ,%s\n' "${RAW_DIR}/run1.tar" >> "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv"
+step "archive refuses data.csv sample without reads" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "archive reports the sample" grep -q "Sample sampleZ not found" "${LOGS}/$(printf "%02d" "$step_no").log"
+check "nothing archived for sample without reads" test ! -e "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
+check "study kept for sample without reads" test -d "${PROJ_DIR}/${PROJ}/${STUDY2}"
+mv "${ROOT}/study2_data.orig" "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv"
 step "archives study two" 0 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 check "archive tarball present" test -f "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
 check "archive tarball valid" tar -tzf "${ARCHIVE_DIR}/${STUDY2}.tar.gz"

@@ -240,20 +240,81 @@ if $append; then
         printf "Error: Append failed. Nothing was changed in %s or the study.\n" "$dest" >&2
         exit 1
     fi
+    # Move the reads into dest and append the new data.csv rows, checksums
+    # and read lists to the files there. Appending in place needs only write
+    # access to the files; replacing them can fail in a shared directory.
+    # Record the list sizes first, so a failure can undo the appends, and
+    # remove the moved reads, which were checked not to exist in dest.
+    if ! csv_rows | /usr/bin/tail -n +2 > data.csv; then
+        printf "Error: Could not write the new data.csv rows. Nothing was changed in %s or the study.\n" "$dest" >&2
+        exit 1
+    fi
+    lists=()
+    declare -A list_size=()
+    for list in data.csv sha512sums.txt appended_reads.txt missing_in_some_tarballs.csv; do
+        [[ -f "$list" ]] || continue
+        lists+=("$list")
+        [[ -f "${dest}/${list}" ]] || continue
+        if ! list_size[$list]=$(/usr/bin/stat -c %s "${dest}/${list}"); then
+            printf "Error: Could not read %s. Nothing was changed in %s or the study.\n" "${dest}/${list}" "$dest" >&2
+            exit 1
+        fi
+    done
+    moved=()
+    touched=()
+    # Undo the moves and the appends tried so far. A list is only cut back
+    # if its size changed (a failed append may have written part of it).
+    undo_append() {
+        local f size
+        local -a not_undone=()
+        for f in "${moved[@]}"; do
+            /usr/bin/rm -f "${dest:?}/${f}" || not_undone+=("$f")
+        done
+        for f in "${touched[@]}"; do
+            if [[ -n "${list_size[$f]:-}" ]]; then
+                size=$(/usr/bin/stat -c %s "${dest}/${f}") || size=""
+                if [[ "$size" != "${list_size[$f]}" ]] &&
+                    ! /usr/bin/truncate -s "${list_size[$f]}" "${dest}/${f}"; then
+                    not_undone+=("$f")
+                fi
+            else
+                /usr/bin/rm -f "${dest:?}/${f}" || not_undone+=("$f")
+            fi
+        done
+        if [[ ${#not_undone[@]} -gt 0 ]]; then
+            printf "Error: Could not undo the append. Check these files in %s:\n" "$dest" >&2
+            printf "  %s\n" "${not_undone[@]}" >&2
+        else
+            printf "Nothing was changed in %s or the study.\n" "$dest" >&2
+        fi
+    }
+    # From here on any exit, a signal included, undoes what was done
+    trap 'undo_append; /usr/bin/rm -rf "${staging:?}"' EXIT
     while IFS= read -r read_file; do
+        # The clash check ran before the extraction; make sure nothing with
+        # this name appeared in dest since, as mv would overwrite it and the
+        # undo would then delete it
+        if [[ -e "${dest}/${read_file}" || -L "${dest}/${read_file}" ]]; then
+            printf "Error: %s appeared in %s during the append\n" "$read_file" "$dest" >&2
+            exit 1
+        fi
+        # Recorded before the move, so a signal right after it is undone too
+        moved+=("$read_file")
         if ! /usr/bin/mv "$read_file" "${dest}/"; then
             printf "Error: Could not move %s into %s\n" "$read_file" "$dest" >&2
             exit 1
         fi
     done < appended_reads.txt
-    /usr/bin/cat sha512sums.txt >> "${dest}/sha512sums.txt"
-    /usr/bin/cat appended_reads.txt >> "${dest}/appended_reads.txt"
-    if [[ -f missing_in_some_tarballs.csv ]]; then
-        /usr/bin/cat missing_in_some_tarballs.csv >> "${dest}/missing_in_some_tarballs.csv"
-    fi
+    for list in "${lists[@]}"; do
+        touched+=("$list")
+        if ! /usr/bin/cat "$list" >> "${dest}/${list}"; then
+            printf "Error: Could not update %s\n" "${dest}/${list}" >&2
+            exit 1
+        fi
+    done
+    trap - EXIT
     cd "$dest" || exit
     /usr/bin/rm -rf "${staging:?}"
-    trap - EXIT
     # Log the transfer
     time=$(/usr/bin/date)
     user=$(/usr/bin/whoami)
@@ -263,8 +324,6 @@ if $append; then
         printf "Project: %s\n" "$project";
         printf "Study: study_%s\n" "$data_dir";
     } >> append_log.txt
-
-    csv_rows | /usr/bin/tail -n +2 >> "${dest}/data.csv"
 
     printf "Copying information to study directory...\n"
     /usr/bin/cp "${dest}/data.csv" "${study_dir}/data.csv"
