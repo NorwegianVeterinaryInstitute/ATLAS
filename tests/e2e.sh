@@ -355,15 +355,34 @@ check "active data removed" test ! -d "${ACTIVE_DATA_DIR}/${DS1}"
 check "freezer log names the project" grep -q "^${PROJ}"$'\t'"${STUDY1}"$'\t' "${FREEZE_DIR}/freeze_log.txt"
 
 # Thaw: study unpacked and active data re-created from the source tarballs.
-# A failed restore keeps the frozen copy.
+# Checks run before anything is written; a later failure removes what the
+# run created and keeps the frozen copy.
 printf "\nthaw_study.sh\n"
 mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
-step "fails when a source tarball is missing" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
 mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
+check "study not unpacked when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "no tarball copied when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "freezer tarball kept after refused thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+mkdir "${ACTIVE_DATA_DIR}/${DS1}"
+step "refuses when active data dir exists" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+check "existing active data dir left alone" test -d "${ACTIVE_DATA_DIR}/${DS1}"
+check "study not unpacked when active data dir exists" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+rmdir "${ACTIVE_DATA_DIR}/${DS1}"
+## Late failure: a frozen study whose sha512sums.txt does not match the
+## reads fails at the final comparison
+cp "${FREEZE_DIR}/${STUDY1}.tar.gz" "${ROOT}/frozen.orig"
+mkdir "${ROOT}/tamper"
+tar -xzf "${ROOT}/frozen.orig" -C "${ROOT}/tamper"
+sed -i '1s/^./x/' "${ROOT}/tamper/${STUDY1}/sha512sums.txt"
+tar -czf "${FREEZE_DIR}/${STUDY1}.tar.gz" -C "${ROOT}/tamper" "$STUDY1"
+step "fails when restored reads do not match" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+check "study dir removed after failed thaw" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "copied tarball removed after failed thaw" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "active data removed after failed thaw" test ! -e "${ACTIVE_DATA_DIR}/${DS1}"
 check "freezer tarball kept after failed thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "failed thaw not logged" test ! -s "${FREEZE_DIR}/thaw_log.txt"
-# Setup, not a test: remove the unpacked study, as the error message asks
-rm -rf "${PROJ_DIR:?}/${PROJ}/${STUDY1}"
+mv "${ROOT}/frozen.orig" "${FREEZE_DIR}/${STUDY1}.tar.gz"
 step "thaws study one" 0 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
 check "study dir restored" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data restored (6 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
