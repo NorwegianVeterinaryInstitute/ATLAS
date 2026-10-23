@@ -194,9 +194,10 @@ printf 'sample,tarball\nsampleF,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq_append
 printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
     "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
 ## Same read file names from two tarballs on one line, and appended to a
-## study that already holds them (#74)
+## study that already holds them (#74). sampleZ is in no tarball (#78).
 printf 'sample,tarball\nsampleC,"%s,%s"\n' "${RAW_DIR}/run2.tar" "${RAW_DIR}/run6.tar" > "${ROOT}/clash.csv"
 printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run6.tar" > "${ROOT}/clash_append.csv"
+printf 'sample,tarball\nsampleA,%s\nsampleZ,%s\n' "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_sample.csv"
 
 ## Configs with a missing freezer or archive directory (#72) and a size
 ## threshold that is not a number or has a leading zero, which bash reads
@@ -321,6 +322,10 @@ check "sample name matched as substring" test -f "${DSM}/sample10_R1.fastq.gz"
 check "read file name with space extracted" test -f "${DSM}/my sample_R1.fastq.gz"
 step "refuses reads with the same file name" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/clash.csv" -d TestProj_clash_20240120
 check "no output dir for clashing reads" test ! -d "${ACTIVE_DATA_DIR}/TestProj_clash_20240120"
+DSZ="${ACTIVE_DATA_DIR}/TestProj_nosample_20240121"
+step "fails on sample not in tarball" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_sample.csv" -d TestProj_nosample_20240121
+check "missing sample reported" grep -q '^sampleZ,' "${DSZ}/missing_samples.csv"
+check "no data.csv after failed activation" test ! -e "${DSZ}/data.csv" -a ! -e "${DSZ}/info.txt"
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"

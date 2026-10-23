@@ -120,10 +120,14 @@ find_read_clashes() {
     [[ $found -eq 0 ]]
 }
 
+# Extract the reads in csv_file into the current directory. Returns 1 if a
+# sample is not found, an extraction fails, or fewer reads than
+# EXPECTED_READS (set by check_tarballs) end up in place.
 transfer_files() {
     local csv_file="$1"
     local append_mode="$2"
     local loopcount=0
+    local failed=0
     local sample_found
     local name tarball tarpath reads i base dir
     local -a tarball_array
@@ -147,14 +151,27 @@ transfer_files() {
                 sample_found=1
 
                 while IFS= read -r i; do
-                    /usr/bin/tar -xf "$tarpath" "$i"
                     base="${i##*/}"
+                    if ! /usr/bin/tar -xf "$tarpath" "$i"; then
+                        printf "Error: Could not extract %s from %s\n" "$i" "$tarpath" >&2
+                        failed=1
+                        continue
+                    fi
                     # Reads inside a directory in the tarball: move them up
                     # and remove the directories tar created, if now empty
                     if [[ "${i#./}" == */* ]]; then
-                        /usr/bin/mv "$i" .
+                        if ! /usr/bin/mv "$i" .; then
+                            printf "Error: Could not move %s into place\n" "$i" >&2
+                            failed=1
+                            continue
+                        fi
                         dir="${i#./}"
                         /usr/bin/rmdir -p --ignore-fail-on-non-empty "${dir%/*}"
+                    fi
+                    if [[ ! -f "$base" ]]; then
+                        printf "Error: %s missing after extraction\n" "$base" >&2
+                        failed=1
+                        continue
                     fi
                     /usr/bin/chmod 444 "$base"
                     /usr/bin/sha512sum "$base" >> sha512sums.txt
@@ -163,13 +180,15 @@ transfer_files() {
                     else
                         printf "%s\n" "$base" >> transferred_reads.txt
                     fi
-                    ((loopcount++))
+                    loopcount=$((loopcount + 1))
                 done <<< "$reads"
             fi
         done
 
         if [[ $sample_found -eq 0 ]]; then
+            printf "Error: Sample %s not found in %s\n" "$name" "$tarball" >&2
             printf "%s,%s\n" "$name" "$tarball" >> missing_samples.csv
+            failed=1
         fi
 
         if [[ ${#tarball_array[@]} -gt 1 ]]; then
@@ -183,12 +202,15 @@ transfer_files() {
         fi
     done < <(/usr/bin/tail -n +2 "$csv_file")
 
-    if [[ $loopcount -eq $EXPECTED_READS ]]; then
-        printf "All files transferred.\n"
-    else
-        printf "Warning: Expected %s reads, but found %s\n" "$EXPECTED_READS" "$loopcount"
-        printf "Please check output for missing files.\n"
+    if [[ $loopcount -ne $EXPECTED_READS ]]; then
+        printf "Error: Expected %s reads, but transferred %s\n" "$EXPECTED_READS" "$loopcount" >&2
+        failed=1
     fi
+
+    if [[ $failed -ne 0 ]]; then
+        return 1
+    fi
+    printf "All files transferred.\n"
 }
 
 find_append_conflicts() {

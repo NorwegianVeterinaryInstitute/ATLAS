@@ -95,7 +95,9 @@ Creates `${ACTIVE_DATA_DIR}/{OUTPUT_DIR}` and populates:
 - `transferred_reads.txt`: A list of the reads transferred
 - `info.txt`: Who activated the data and when
 - `data.csv`: The samples from the input csv, with the header `sample,tarball`
-- `missing_samples.csv`: A list of samples not found the tarball(s)
+- `missing_samples.csv`: A list of samples not found in the tarball(s)
+
+If a sample is not found or a read cannot be extracted, the script stops before writing `info.txt` and `data.csv`. Remove the output directory and rerun once the problem is fixed.
 
 ### Append mode
 Updates existing active/study directories and adds:
@@ -130,3 +132,7 @@ And copies updated files to the connected study directory at:
     - Append input conflicts with existing data.csv.
 - Error: these read files would overwrite each other or existing reads:...
     - Two reads share a file name (from two tarballs, two directories in one tarball, or a sample name contained in another), or, in append mode, a read is already in the output directory. Nothing is changed.
+- Error: Sample <name> not found in <tarball>
+    - The sample has no reads in the tarball. Listed in `missing_samples.csv`; the script stops.
+- Error: Expected N reads, but transferred M
+    - Some reads were not extracted. Earlier errors give the cause.
