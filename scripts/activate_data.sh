@@ -228,7 +228,11 @@ if $append; then
     printf "No conflicts found. Files will be added to the existing directory.\n"
     cd "$dest" || exit
     # Run transfer
-    transfer_files <(csv_rows) "$append"
+    if ! transfer_files <(csv_rows) "$append"; then
+        printf "Error: Append failed; data.csv and the study were not updated.\n" >&2
+        printf "Reads added to %s so far are listed in appended_reads.txt there.\n" "$dest" >&2
+        exit 1
+    fi
     # Log the transfer
     time=$(/usr/bin/date)
     user=$(/usr/bin/whoami)
@@ -260,8 +264,11 @@ else
     /usr/bin/mkdir "$dest"
     cd "$dest" || exit
     # Transfer files
-    transfer_files <(csv_rows) "$append"
-    
+    if ! transfer_files <(csv_rows) "$append"; then
+        printf "Error: Activation failed. Fix the problem, remove %s and rerun.\n" "$dest" >&2
+        exit 1
+    fi
+
     # Create note file in subproject
     time=$(/usr/bin/date)
     user=$(/usr/bin/whoami)
