@@ -68,12 +68,53 @@ check_tarballs() {
     /usr/bin/rm -f missing_tarballs.csv
 }
 
+# Report reads that would overwrite each other: a file name listed more than
+# once across the CSV (two tarballs, two directories in one tarball, a sample
+# listed twice, or one sample name contained in another), or a file name
+# already present in dest_dir (append mode; pass "" to skip). Prints one line
+# per clash and returns 1 if there are any.
+find_read_clashes() {
+    local csv_file="$1"
+    local dest_dir="$2"
+    local name tarball tarpath f base
+    local found=0
+    local -a tarball_array
+    declare -A seen=()
+
+    while IFS="," read -r name tarball || [[ -n "$name" ]]; do
+        name=$(strip_quotes "$name")
+        tarball=$(strip_quotes "$tarball")
+
+        [[ -z "$name" && -z "$tarball" ]] && continue
+
+        IFS=',' read -ra tarball_array <<< "$tarball"
+
+        for tarpath in "${tarball_array[@]}"; do
+            tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
+
+            while IFS= read -r f; do
+                base="${f##*/}"
+                if [[ -n "${seen[$base]:-}" ]]; then
+                    printf "%s: in %s and %s\n" "$base" "${seen[$base]}" "${tarpath}:${f}"
+                    found=1
+                elif [[ -n "$dest_dir" && -e "${dest_dir}/${base}" ]]; then
+                    printf "%s: already in %s\n" "$base" "$dest_dir"
+                    found=1
+                fi
+                seen[$base]="${tarpath}:${f}"
+            done < <(list_reads "$tarpath" "$name")
+        done
+    done < <(/usr/bin/tail -n +2 "$csv_file")
+
+    [[ $found -eq 0 ]]
+}
+
 transfer_files() {
     local csv_file="$1"
     local append_mode="$2"
     local loopcount=0
     local sample_found
-    local name tarball tarpath reads i tarball_name
+    local name tarball tarpath reads i base dir
     local -a tarball_array
 
     printf "Transferring files...\n"
@@ -96,8 +137,14 @@ transfer_files() {
 
                 while IFS= read -r i; do
                     /usr/bin/tar -xf "$tarpath" "$i"
-                    base=$(/usr/bin/basename "$i")
-                    /usr/bin/mv "$i" .
+                    base="${i##*/}"
+                    # Reads inside a directory in the tarball: move them up
+                    # and remove the directories tar created, if now empty
+                    if [[ "${i#./}" == */* ]]; then
+                        /usr/bin/mv "$i" .
+                        dir="${i#./}"
+                        /usr/bin/rmdir -p --ignore-fail-on-non-empty "${dir%/*}"
+                    fi
                     /usr/bin/chmod 444 "$base"
                     /usr/bin/sha512sum "$base" >> sha512sums.txt
                     if $append_mode; then
@@ -105,8 +152,6 @@ transfer_files() {
                     else
                         printf "%s\n" "$base" >> transferred_reads.txt
                     fi
-                    tarball_name=$(/usr/bin/basename "$tarpath")
-                    /usr/bin/rm -rf "${dest:?}/${tarball_name%.tar}"
                     ((loopcount++))
                 done <<< "$reads"
             fi

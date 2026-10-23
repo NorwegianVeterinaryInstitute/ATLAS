@@ -144,6 +144,7 @@ printf "Study README template\n" > "${TEMPLATE_DIR}/study_readme.txt"
 ## where READ_EXT defaults to fastq.gz.
 ## run1: sampleA, sampleB. run2: sampleC. run3: sampleD.
 ## run5: sampleE, sampleF as .fq.gz (#71).
+## run6: sampleC again, same file names as in run2 (#74).
 make_tarball() {
     local run="$1"; shift
     local sample
@@ -160,6 +161,7 @@ make_tarball run1 sampleA sampleB
 make_tarball run2 sampleC
 make_tarball run3 sampleD
 READ_EXT=fq.gz make_tarball run5 sampleE sampleF
+make_tarball run6 sampleC
 ## run4 tests sample name matching (#69). Its group name has a space, as in
 ## tarballs made on a domain-joined machine, which used to shift the columns
 ## of `tar -tvf`. s.1 must not match sX1 (no regex); sample1 matches sample10
@@ -191,6 +193,10 @@ printf 'sample,tarball\nsampleE,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq.csv"
 printf 'sample,tarball\nsampleF,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq_append.csv"
 printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
     "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
+## Same read file names from two tarballs on one line, and appended to a
+## study that already holds them (#74)
+printf 'sample,tarball\nsampleC,"%s,%s"\n' "${RAW_DIR}/run2.tar" "${RAW_DIR}/run6.tar" > "${ROOT}/clash.csv"
+printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run6.tar" > "${ROOT}/clash_append.csv"
 
 ## Configs with a missing freezer or archive directory (#72). Later
 ## assignments win.
@@ -305,6 +311,8 @@ check "matching reads extracted (4 fastq)" test "$(count_files "$DSM" '*.fastq.g
 check "dot in sample name matched literally" test -f "${DSM}/s.1_R1.fastq.gz" -a ! -e "${DSM}/sX1_R1.fastq.gz"
 check "sample name matched as substring" test -f "${DSM}/sample10_R1.fastq.gz"
 check "read file name with space extracted" test -f "${DSM}/my sample_R1.fastq.gz"
+step "refuses reads with the same file name" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/clash.csv" -d TestProj_clash_20240120
+check "no output dir for clashing reads" test ! -d "${ACTIVE_DATA_DIR}/TestProj_clash_20240120"
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"
@@ -329,6 +337,8 @@ step "appends sampleC" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" 
 check "6 fastq files in active data" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "6 data symlinks in study" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 6
 check "data.csv has 3 samples" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" | grep -c .)" -eq 3
+step "append rejects reads already in study" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/clash_append.csv" -d "$DS1"
+check "still 6 checksums after refused append" test "$(grep -c . "${ACTIVE_DATA_DIR}/${DS1}/sha512sums.txt")" -eq 6
 ## Study three was activated from a CSV without a trailing newline: the
 ## appended row must start on its own line, not be glued to the last one
 step "appends to study from CSV without newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/study1_append.csv" -d "$DS3"
