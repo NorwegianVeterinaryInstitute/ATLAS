@@ -103,6 +103,11 @@ if [[ -d "$fullpath" ]]; then
     exit 1
 fi
 
+if [[ ! -f "${FREEZE_DIR}/${study_dir}.tar.gz" ]]; then
+    printf "Frozen study not found: %s\n" "${FREEZE_DIR}/${study_dir}.tar.gz" >&2
+    exit 1
+fi
+
 # Thaw study
 printf "All checks passed, transferring to project directory and thawing...\n"
 
@@ -112,7 +117,7 @@ hash_pre=$(/usr/bin/sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk
 ## Transfer file
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "${FREEZE_DIR}/${study_dir}.tar.gz" "$proj_fullpath" 2> "$rsync_err_file"; then
+if /usr/bin/rsync -avPW "${FREEZE_DIR}/${study_dir}.tar.gz" "${proj_fullpath}/" 2> "$rsync_err_file"; then
     /usr/bin/rm -f "${rsync_err_file:?}"
 else
     status=$?

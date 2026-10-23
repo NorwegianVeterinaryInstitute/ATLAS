@@ -25,6 +25,7 @@ DESCRIPTION:
     - Warns if directory size exceeds ARCHIVE_SIZE_THRESHOLD_GB
     - Verifies that sandbox directory has been removed
     - Verifies that results and data directories are present
+    - Checks that the source tarballs in the study's data.csv still exist
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
     - Transfers the archive to the archive directory (ARCHIVE_DIR)
@@ -36,6 +37,9 @@ REQUIREMENTS:
     - Sandbox directory must be removed before archiving
     - Results directory must be present
     - Data directory must be present
+    - The source tarballs in data.csv must exist: the archived study holds
+      links to the reads, not the reads themselves, so the reads can only
+      be restored from those tarballs
 
 EXAMPLE:
     archive_study.sh -s study_mydata_20231120 -p myproject
@@ -79,6 +83,8 @@ if [[ -z "$proj_name" ]]; then
 fi
 
 # Get input and set variables
+## Get script dir
+SCRIPT_DIR="$(cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "${BASH_SOURCE[0]}")")" && pwd -P)"
 ## Get config variables
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
@@ -89,6 +95,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/lib.sh"
 
 proj_fullpath="${PROJ_DIR}/${proj_name}"
 fullpath="${PROJ_DIR}/${proj_name}/${study_dir}"
@@ -102,6 +110,12 @@ fi
 
 if [[ ! -d "$fullpath" ]]; then
     printf "Supplied study directory does not exist.\n" >&2
+    exit 1
+fi
+
+## Without this check, rsync would create a file named after the directory
+if [[ ! -d "$ARCHIVE_DIR" ]]; then
+    printf "Archive directory does not exist: %s\n" "$ARCHIVE_DIR" >&2
     exit 1
 fi
 
@@ -158,6 +172,16 @@ if [[ -f "${ARCHIVE_DIR}/${study_dir}.tar.gz" ]]; then
     exit 1
 fi
 
+## The reads can only be restored from the source tarballs
+if [[ ! -f "${fullpath}/data.csv" ]]; then
+    printf "Error: %s not found; cannot check the source tarballs.\n" "${fullpath}/data.csv" >&2
+    exit 1
+fi
+if ! check_tarballs "${fullpath}/data.csv"; then
+    printf "The reads can only be restored from the source tarballs. Not archiving.\n" >&2
+    exit 1
+fi
+
 # Create experiment tarball
 printf "All checks passed, creating tarball...\n"
 cd "$proj_fullpath"
@@ -181,7 +205,7 @@ hash_pre="$(/usr/bin/sha512sum "${study_dir}.tar.gz" | awk '{print $1}')"
 printf "Moving archive to the archive directory...\n"
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "$ARCHIVE_DIR" 2> "$rsync_err_file"; then
+if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "${ARCHIVE_DIR}/" 2> "$rsync_err_file"; then
     /usr/bin/rm -f "${rsync_err_file:?}"
 else
     status=$?
