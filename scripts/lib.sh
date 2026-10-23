@@ -182,3 +182,22 @@ find_append_conflicts() {
 
     [[ $found_conflicts -eq 0 ]]
 }
+
+# Link every read file (*.fastq.gz, *.fq.gz) in src_dir into dst_dir.
+# Reads that are already linked are skipped, so append mode can link the
+# whole directory again. Any other failure to link is an error.
+link_reads() {
+    local src_dir="$1"
+    local dst_dir="$2"
+    local f
+    local failed=0
+
+    for f in "$src_dir"/*.fastq.gz "$src_dir"/*.fq.gz; do
+        # An unmatched glob stays literal
+        [[ -e "$f" ]] || continue
+        [[ -L "${dst_dir}/${f##*/}" ]] && continue
+        /usr/bin/ln -s "$f" "$dst_dir/" || failed=1
+    done
+
+    return "$failed"
+}

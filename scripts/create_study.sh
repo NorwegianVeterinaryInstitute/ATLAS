@@ -70,6 +70,8 @@ if [[ -z "$proj_name" ]]; then
 fi
 
 ## Create dir variables
+## Get script dir
+SCRIPT_DIR="$(cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "${BASH_SOURCE[0]}")")" && pwd -P)"
 ## Get config variables
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
@@ -80,6 +82,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/lib.sh"
 
 dest="${PROJ_DIR}/${proj_name}"
 study_data="${ACTIVE_DATA_DIR}/${study_data}"
@@ -113,7 +117,10 @@ printf "Creating output directory and populating files...\n"
 
 printf "Creating symbolic links to read files...\n"
 /usr/bin/mkdir "${study}/data"
-/usr/bin/ln -s "${study_data}"/*fastq.gz "${study}/data"
+if ! link_reads "$study_data" "${study}/data"; then
+    printf "Error: Could not link all read files into %s\n" "${study}/data" >&2
+    exit 1
+fi
 
 printf "Creating subdirectories...\n"
 /usr/bin/mkdir "${study}/sandbox"
