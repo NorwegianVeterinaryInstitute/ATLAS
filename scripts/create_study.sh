@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 # Script used to generate study directories
 # under a specific project directory, connected
 # to the directory created with the activate script

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 ## Script used to transfer data from tarball location to ${ACTIVE_DATA_DIR}.
 
 # Help function
@@ -163,14 +165,16 @@ if [[ -n "$csv_data" && "$first_tarball" != *.tar ]]; then
 fi
 
 # Rows like "","" are skipped by the readers, so they do not count
-if ! printf "%s\n" "$csv_data" | /usr/bin/grep -q '[^,"[:space:]]'; then
+if ! /usr/bin/grep -q '[^,"[:space:]]' <<< "$csv_data"; then
     printf "Error: No samples found in CSV file: %s\n" "$csvfile" >&2
     exit 1
 fi
 
 csv_rows() {
     printf "sample,tarball\n"
-    [[ -n "$csv_data" ]] && printf "%s\n" "$csv_data"
+    if [[ -n "$csv_data" ]]; then
+        printf "%s\n" "$csv_data"
+    fi
 }
 
 # Check tarball presence
@@ -219,7 +223,7 @@ fi
 ## Append mode
 if $append; then
     printf "Append mode detected. This will append data to an existing study.\n"
-    read -r -p "Continue with appending data? (y/n): " response
+    read -r -p "Continue with appending data? (y/n): " response || true
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         printf "Append cancelled.\n"
         exit 1

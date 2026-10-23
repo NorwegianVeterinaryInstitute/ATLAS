@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eo pipefail
 
 # Script for freezing studies
 
@@ -139,7 +139,7 @@ fi
 if ! $assume_yes; then
     printf "You are about to freeze the study '%s' from project '%s' to %s.\n" "$study_dir" "$proj_name" "$FREEZE_DIR"
     printf "The study and its active data will be deleted afterwards.\n"
-    read -r -p "Start the freezing process? (y/n): " response
+    read -r -p "Start the freezing process? (y/n): " response || true
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         printf "Freezing cancelled.\n"
         exit 1
