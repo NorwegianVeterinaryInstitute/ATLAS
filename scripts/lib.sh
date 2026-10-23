@@ -29,8 +29,14 @@ list_reads() {
     done
 }
 
+# Check that every tarball in csv_file exists and set EXPECTED_READS to the
+# number of reads they hold for their samples. Missing tarballs are printed,
+# and also written to missing_tarballs.csv in the current directory unless
+# write_report is false (for scripts that only check before changing
+# anything).
 check_tarballs() {
     local csv_file="$1"
+    local write_report="${2:-true}"
     EXPECTED_READS=0
     local name tarball tarpath count
     local -a tarball_array
@@ -58,6 +64,11 @@ check_tarballs() {
             fi
         done
     done < <(/usr/bin/tail -n +2 "$csv_file")
+
+    if ! $write_report; then
+        [[ ${#missing_rows[@]} -eq 0 ]]
+        return
+    fi
 
     # Rewrite the report on every run so it only lists what is missing now
     if [[ ${#missing_rows[@]} -gt 0 ]]; then

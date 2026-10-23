@@ -193,10 +193,12 @@ printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
     "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
 
 ## Configs with a missing freezer or archive directory (#72) and a size
-## threshold that is not a number (#81). Later assignments win.
+## threshold that is not a number or has a leading zero, which bash reads
+## as octal (#81). Later assignments win.
 { cat "$ATLAS_CONFIG"; printf 'FREEZE_DIR="%s"\n' "${ROOT}/no_freezer"; } > "${ROOT}/config_no_freezer.sh"
 { cat "$ATLAS_CONFIG"; printf 'ARCHIVE_DIR="%s"\n' "${ROOT}/no_archive"; } > "${ROOT}/config_no_archive.sh"
 { cat "$ATLAS_CONFIG"; printf 'ARCHIVE_SIZE_THRESHOLD_GB="value"\n'; } > "${ROOT}/config_bad_threshold.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_SIZE_THRESHOLD_GB="080"\n'; } > "${ROOT}/config_octal_threshold.sh"
 
 # Test helpers
 pass=0
@@ -344,6 +346,7 @@ mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
 step "refuses when a source tarball is missing" 1 "y\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
 check "study kept when source tarball missing" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "freeze check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
 step "refuses missing freezer dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_freezer.sh" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 check "no file created at freezer path" test ! -e "${ROOT}/no_freezer"
 step "freeze cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
@@ -363,6 +366,7 @@ step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/thaw_study
 mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
 check "study not unpacked when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "no tarball copied when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "thaw check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
 check "freezer tarball kept after refused thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 mkdir "${ACTIVE_DATA_DIR}/${DS1}"
 step "refuses when active data dir exists" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
@@ -394,6 +398,7 @@ printf "\narchive_study.sh\n"
 step "refuses missing archive dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_archive.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 check "no file created at archive path" test ! -e "${ROOT}/no_archive"
 step "rejects non-numeric size threshold" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_bad_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+step "rejects size threshold with leading zero" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_octal_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 step "archive cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 step "refuses while sandbox present" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 

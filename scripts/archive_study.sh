@@ -120,7 +120,7 @@ if [[ ! -d "$ARCHIVE_DIR" ]]; then
 fi
 
 threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
-if [[ ! "$threshold" =~ ^[0-9]+$ ]]; then
+if [[ ! "$threshold" =~ ^(0|[1-9][0-9]*)$ ]]; then
     printf "Error: ARCHIVE_SIZE_THRESHOLD_GB must be a whole number of GB, not '%s'.\n" "$threshold" >&2
     exit 1
 fi
@@ -181,7 +181,7 @@ if [[ ! -f "${fullpath}/data.csv" ]]; then
     printf "Error: %s not found; cannot check the source tarballs.\n" "${fullpath}/data.csv" >&2
     exit 1
 fi
-if ! check_tarballs "${fullpath}/data.csv"; then
+if ! check_tarballs "${fullpath}/data.csv" false; then
     printf "The reads can only be restored from the source tarballs. Not archiving.\n" >&2
     exit 1
 fi

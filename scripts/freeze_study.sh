@@ -130,7 +130,7 @@ if [[ ! -f "${fullpath}/data.csv" ]]; then
     printf "Error: %s not found; cannot check the source tarballs.\n" "${fullpath}/data.csv" >&2
     exit 1
 fi
-if ! check_tarballs "${fullpath}/data.csv"; then
+if ! check_tarballs "${fullpath}/data.csv" false; then
     printf "Thawing needs the source tarballs. Not freezing.\n" >&2
     exit 1
 fi
