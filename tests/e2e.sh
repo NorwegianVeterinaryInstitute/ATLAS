@@ -198,6 +198,7 @@ printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
 printf 'sample,tarball\nsampleC,"%s,%s"\n' "${RAW_DIR}/run2.tar" "${RAW_DIR}/run6.tar" > "${ROOT}/clash.csv"
 printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run6.tar" > "${ROOT}/clash_append.csv"
 printf 'sample,tarball\nsampleA,%s\nsampleZ,%s\n' "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_sample.csv"
+printf 'sample,tarball\nsampleD,%s\nsampleZ,%s\n' "${RAW_DIR}/run3.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_sample_append.csv"
 
 ## Configs with a missing freezer or archive directory (#72) and a size
 ## threshold that is not a number or has a leading zero, which bash reads
@@ -323,9 +324,9 @@ check "read file name with space extracted" test -f "${DSM}/my sample_R1.fastq.g
 step "refuses reads with the same file name" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/clash.csv" -d TestProj_clash_20240120
 check "no output dir for clashing reads" test ! -d "${ACTIVE_DATA_DIR}/TestProj_clash_20240120"
 DSZ="${ACTIVE_DATA_DIR}/TestProj_nosample_20240121"
-step "fails on sample not in tarball" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_sample.csv" -d TestProj_nosample_20240121
-check "missing sample reported" grep -q '^sampleZ,' "${DSZ}/missing_samples.csv"
-check "no data.csv after failed activation" test ! -e "${DSZ}/data.csv" -a ! -e "${DSZ}/info.txt"
+step "refuses sample not in tarball" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_sample.csv" -d TestProj_nosample_20240121
+check "missing sample reported" grep -q "Sample sampleZ not found" "${LOGS}/$(printf "%02d" "$step_no").log"
+check "no output dir for missing sample" test ! -e "$DSZ"
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"
@@ -350,6 +351,11 @@ step "appends sampleC" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" 
 check "6 fastq files in active data" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "6 data symlinks in study" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 6
 check "data.csv has 3 samples" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" | grep -c .)" -eq 3
+check "no staging dir left after append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/.append_in_progress"
+## sampleD is valid, sampleZ is in no tarball: nothing may be added (#78)
+step "append refuses sample not in tarball" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/no_sample_append.csv" -d "$DS1"
+check "no reads added for refused append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/sampleD_R1.fastq.gz"
+check "data.csv unchanged after refused append" test "$(tail -n +2 "${ACTIVE_DATA_DIR}/${DS1}/data.csv" | grep -c .)" -eq 3
 step "append rejects reads already in study" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/clash_append.csv" -d "$DS1"
 check "still 6 checksums after refused append" test "$(grep -c . "${ACTIVE_DATA_DIR}/${DS1}/sha512sums.txt")" -eq 6
 ## Study three was activated from a CSV without a trailing newline: the

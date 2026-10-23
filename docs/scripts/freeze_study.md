@@ -54,6 +54,8 @@ Use this script when a study is paused long-term and should be moved out of acti
     - Target archive already exists in FREEZE_DIR.
 - Error: Tarball not found: ... / Thawing needs the source tarballs. Not freezing.
     - A source tarball in the study's `data.csv` has moved or been deleted.
+- Error: Sample <name> not found in ...
+    - A sample in the study's `data.csv` has no reads in its tarball(s), so they could not be restored. Studies activated before missing samples stopped activation can have such rows; remove them from `data.csv` (in the study and in `ACTIVE_DATA_DIR`) and rerun.
 - Freezing cancelled.
     - The prompt was not answered with `y`.
 - Error: Archive verification failed. Deleting corrupt archive.
