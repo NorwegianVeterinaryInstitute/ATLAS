@@ -7,7 +7,8 @@ set -e
 # Help function
 show_help() {
     cat << EOF
-Usage: thaw_study.sh -s STUDY_DIR -p PROJECT_DIR
+Usage: atlas thaw_study -s STUDY_DIR -p PROJECT_DIR
+       thaw_study.sh -s STUDY_DIR -p PROJECT_DIR
 
 Thaw (restore) a frozen study from freezer storage.
 
@@ -30,7 +31,7 @@ DESCRIPTION:
     using the freeze_study.sh script.
 
 EXAMPLE:
-    thaw_study.sh -s study_mydata_20231120 -p myproject
+    atlas thaw_study -s study_mydata_20231120 -p myproject
 
 EOF
 }

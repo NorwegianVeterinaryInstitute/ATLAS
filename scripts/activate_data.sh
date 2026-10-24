@@ -5,7 +5,8 @@
 # Help function
 show_help() {
     cat << EOF
-Usage: activate_data.sh -c INPUT_CSV -d OUTPUT_DIR [-a -p PROJECT_NAME]
+Usage: atlas activate_data -c INPUT_CSV -d OUTPUT_DIR [-a -p PROJECT_NAME]
+       activate_data.sh -c INPUT_CSV -d OUTPUT_DIR [-a -p PROJECT_NAME]
 
 Transfer data from tarball path to ACTIVE_DATA_DIR.
 
@@ -49,7 +50,7 @@ DESCRIPTION:
     data to the existing directory and update the data.csv file.
 
 EXAMPLE:
-    activate_data.sh -c samples.csv -d MyProj_Study1_20231120 -p 12345_MyProj -a
+    atlas activate_data -c samples.csv -d MyProj_Study1_20231120 -p 12345_MyProj -a
 
 EOF
 }

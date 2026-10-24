@@ -5,7 +5,15 @@ To install ATLAS, clone the repository to a location on your system:
 git clone git@github.com:NorwegianVeterinaryInstitute/ATLAS.git
 ```
 
-Optional: The scripts may be linked to a `bin` directory on your system to make it easy to use them!
+Optional: Link `scripts/atlas.sh` into a `bin` directory on your `PATH` as `atlas`, to run every ATLAS script through one command:
+
+```
+ln -s "$PWD/ATLAS/scripts/atlas.sh" ~/bin/atlas
+atlas -h
+atlas create_project -p 12345_MyProject
+```
+
+See [atlas.sh](scripts/atlas.md). The individual scripts can still be called directly or linked to a `bin` directory.
 
 # Dependencies
 ATLAS is written with GNU bash, version 5.1.8(1)-release (x86_64-redhat-linux-gnu).

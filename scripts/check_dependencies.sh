@@ -8,7 +8,8 @@
 # Help function
 show_help() {
     printf '%s\n' \
-        "Usage: check_dependencies.sh" \
+        "Usage: atlas check_dependencies" \
+        "       check_dependencies.sh" \
         "" \
         "Check that the external tools used by the ATLAS scripts are installed." \
         "" \
@@ -24,7 +25,7 @@ show_help() {
         "    - Exits with an error if any tool is missing or too old" \
         "" \
         "EXAMPLE:" \
-        "    check_dependencies.sh" \
+        "    atlas check_dependencies" \
         ""
 }
 

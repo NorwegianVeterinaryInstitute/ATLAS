@@ -10,7 +10,8 @@ set -e
 # Help function
 show_help() {
     cat << EOF
-Usage: archive_study.sh -s STUDY_DIR -p PROJECT_DIR
+Usage: atlas archive_study -s STUDY_DIR -p PROJECT_DIR
+       archive_study.sh -s STUDY_DIR -p PROJECT_DIR
 
 Archive a study by creating a tarball and transferring it to ARCHIVE_DIR.
 
@@ -42,7 +43,7 @@ REQUIREMENTS:
       be restored from those tarballs
 
 EXAMPLE:
-    archive_study.sh -s study_mydata_20231120 -p myproject
+    atlas archive_study -s study_mydata_20231120 -p myproject
 
 EOF
 }

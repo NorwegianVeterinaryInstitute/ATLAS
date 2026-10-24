@@ -7,7 +7,8 @@
 # Help function
 show_help() {
     cat << 'EOF'
-Usage: create_study.sh -p PROJECT_DIR -d DATA_DIR
+Usage: atlas create_study -p PROJECT_DIR -d DATA_DIR
+       create_study.sh -p PROJECT_DIR -d DATA_DIR
 
 Generate study directories under a specific project directory, connected
 to the directory created with the activate script.
@@ -28,7 +29,7 @@ DESCRIPTION:
     - Subdirectories: sandbox, results, scripts
 
 EXAMPLE:
-    create_study.sh -p myproject -d mydata_study_20231120
+    atlas create_study -p myproject -d mydata_study_20231120
 
 EOF
 }
