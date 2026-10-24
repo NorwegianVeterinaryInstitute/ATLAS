@@ -15,7 +15,7 @@ authors:
     given-names: Novica
     orcid: "https://orcid.org/0009-0005-7773-7718"
     affiliation: Norwegian Veterinary Institute
-version: 1.3.4 # x-release-please-version
+version: 1.4.0 # x-release-please-version
 license: BSD-3-Clause
 repository-code: "https://github.com/NorwegianVeterinaryInstitute/ATLAS"
 url: "https://norwegianveterinaryinstitute.github.io/ATLAS/"
