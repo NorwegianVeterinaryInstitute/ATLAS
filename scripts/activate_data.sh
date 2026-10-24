@@ -19,6 +19,7 @@ ARGUMENTS:
 DESCRIPTION:
     This script performs the following operations:
     - Validates the CSV file and checks for tarball presence
+    - Stops if two reads, or a read and an existing file, share a file name
     - Creates the output directory at ACTIVE_DATA_DIR/OUTPUT_DIR
     - Extracts FASTQ files from tarballs specified in the CSV
     - Sets files to read-only (chmod 444)
@@ -180,6 +181,40 @@ fi
 printf "All tarballs found.\n"
 printf "Expected reads: %s\n" "$EXPECTED_READS"
 
+# Check the output directories, before asking or changing anything
+if $append; then
+    study_dir="${PROJ_DIR}/${proj_name}/study_${data_dir}"
+    if [[ ! -d "$dest" || ! -d "$study_dir" ]]; then
+        printf "Output directories do not exist, cannot append.\n"
+        exit 1
+    fi
+    if [[ ! -f "${dest}/data.csv" ]]; then
+        printf "No existing csv file found. Cannot append data.\n"
+        exit 1
+    fi
+    if ! conflicts=$(find_append_conflicts <(csv_rows) "${dest}/data.csv"); then
+        printf "Error: these sample/tarball combinations already exist:\n"
+        printf '%s\n' "$conflicts"
+        exit 1
+    fi
+    clash_dir="$dest"
+else
+    if [[ -d "$dest" ]]; then
+        printf "Output directory already exists. Please choose a different name.\n"
+        exit 1
+    fi
+    clash_dir=""
+fi
+
+# Reads are moved into one directory by file name, so two with the same name
+# would overwrite each other. In append mode, dest already holds reads.
+if ! clashes=$(find_read_clashes <(csv_rows) "$clash_dir"); then
+    printf "Error: these read files would overwrite each other or existing reads:\n" >&2
+    printf "%s\n" "$clashes" >&2
+    printf "Make the sample names unambiguous or split the input. Nothing was changed.\n" >&2
+    exit 1
+fi
+
 # Split at append flag
 ## Append mode
 if $append; then
@@ -188,72 +223,42 @@ if $append; then
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         printf "Append cancelled.\n"
         exit 1
-    else
-        # Check for existing directories and csv file, then run transfer
-        study_dir="${PROJ_DIR}/${proj_name}/study_${data_dir}"
-        if [[ -d "$dest" && -d "$study_dir" ]]; then
-            printf "Data and Project directories detected. Files will be added to existing directory.\n"
-            cd "$dest" || exit
-        else
-            printf "Output directories do not exist, cannot append.\n"
-            exit 1
-        fi
-        printf "Detecting existing csv file...\n"
-        if [[ -f "${dest}/data.csv" ]]; then
-            printf "Existing csv file found. Checking for conflicts...\n"
-            conflicts=$(find_append_conflicts <(csv_rows) "${dest}/data.csv")
-            status=$?
-
-            if [[ $status -ne 0 ]]; then
-                printf "Error: these sample/tarball combinations already exist:\n"
-                printf '%s\n' "$conflicts"
-                exit 1
-            else
-                printf "No conflicts found. Appending data...\n"
-                # Run transfer
-                transfer_files <(csv_rows) "$append"
-                # Log the transfer
-                time=$(/usr/bin/date)
-                user=$(/usr/bin/whoami)
-
-                {
-                    printf "Appended by %s on %s\n" "$user" "$time";
-                    printf "Project: %s\n" "$project";
-                    printf "Study: study_%s\n" "$data_dir";
-                } >> append_log.txt
-
-                csv_rows | /usr/bin/tail -n +2 >> "${dest}/data.csv"
-
-                printf "Copying information to study directory...\n"
-                /usr/bin/cp "${dest}/data.csv" "${study_dir}/data.csv"
-                /usr/bin/cp "${dest}/append_log.txt" "${study_dir}/append_log.txt"
-                /usr/bin/cp "${dest}/appended_reads.txt" "${study_dir}/appended_reads.txt"
-                /usr/bin/cp sha512sums.txt "${study_dir}/sha512sums.txt"
-
-                printf "Adding symlinks...\n"
-                if ! link_reads "${ACTIVE_DATA_DIR}/${data_dir}" "${study_dir}/data"; then
-                    printf "Error: Could not link all read files into %s\n" "${study_dir}/data" >&2
-                    exit 1
-                fi
-
-                printf "Data appended successfully!\n"
-            fi
-        else
-            printf "No existing csv file found. Cannot append data.\n"
-            exit 1
-        fi
     fi
+
+    printf "No conflicts found. Files will be added to the existing directory.\n"
+    cd "$dest" || exit
+    # Run transfer
+    transfer_files <(csv_rows) "$append"
+    # Log the transfer
+    time=$(/usr/bin/date)
+    user=$(/usr/bin/whoami)
+
+    {
+        printf "Appended by %s on %s\n" "$user" "$time";
+        printf "Project: %s\n" "$project";
+        printf "Study: study_%s\n" "$data_dir";
+    } >> append_log.txt
+
+    csv_rows | /usr/bin/tail -n +2 >> "${dest}/data.csv"
+
+    printf "Copying information to study directory...\n"
+    /usr/bin/cp "${dest}/data.csv" "${study_dir}/data.csv"
+    /usr/bin/cp "${dest}/append_log.txt" "${study_dir}/append_log.txt"
+    /usr/bin/cp "${dest}/appended_reads.txt" "${study_dir}/appended_reads.txt"
+    /usr/bin/cp sha512sums.txt "${study_dir}/sha512sums.txt"
+
+    printf "Adding symlinks...\n"
+    if ! link_reads "${ACTIVE_DATA_DIR}/${data_dir}" "${study_dir}/data"; then
+        printf "Error: Could not link all read files into %s\n" "${study_dir}/data" >&2
+        exit 1
+    fi
+
+    printf "Data appended successfully!\n"
 ## Non-append mode
 else
-    # Directory check
-    if [[ -d "$dest" ]]; then
-        printf "Output directory already exists. Please choose a different name.\n"
-        exit 1
-    else
-        printf "Creating output directory.\n"
-        /usr/bin/mkdir "$dest"
-        cd "$dest" || exit
-    fi
+    printf "Creating output directory.\n"
+    /usr/bin/mkdir "$dest"
+    cd "$dest" || exit
     # Transfer files
     transfer_files <(csv_rows) "$append"
     
