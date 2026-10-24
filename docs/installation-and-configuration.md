@@ -44,7 +44,7 @@ ACTIVE_DATA_DIR="<path>"
 FREEZE_DIR="<path>"
 ARCHIVE_DIR="<path>"
 TEMPLATE_DIR="<path>"
-ARCHIVE_SIZE_THRESHOLD_GB="value"
+ARCHIVE_SIZE_THRESHOLD_GB="250"
 ```
 
 Variable explanations:
@@ -54,4 +54,4 @@ Variable explanations:
 - `FREEZE_DIR`: The directory where studies are temporarily frozen by `freeze_study.sh`
 - `ARCHIVE_DIR`: The directory where studies are archived by `archive_study.sh`
 - `TEMPLATE_DIR`: The directory that holds the various README templates used in ATLAS
-- `ARCHIVE_SIZE_THRESHOLD_GB`: The maximum allowed size of a study (in gb) in `archive_study.sh` without the script throwing a warning
+- `ARCHIVE_SIZE_THRESHOLD_GB`: The maximum allowed size of a study (in GB, a whole number) in `archive_study.sh` without the script asking for confirmation

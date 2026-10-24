@@ -25,7 +25,7 @@ Use this script when a study is finalized and should be moved from active projec
     - `PROJ_DIR`
     - `ARCHIVE_DIR`
     - `ACTIVE_DATA_DIR`
-    - `ARCHIVE_SIZE_THRESHOLD_GB` (optional, defaults to 250)
+    - `ARCHIVE_SIZE_THRESHOLD_GB` (optional, a whole number without leading zeros, defaults to 250)
 - Project directory exists under `PROJ_DIR`.
 - Study directory exists under `PROJ_DIR/project_name`.
 - `ARCHIVE_DIR` exists.
@@ -63,6 +63,8 @@ In project storage:
     - Study path not found.
 - Archive directory does not exist: ...
     - `ARCHIVE_DIR` is wrong or not mounted.
+- Error: ARCHIVE_SIZE_THRESHOLD_GB must be a whole number of GB...
+    - Fix the value in the config file, e.g. `250`. Leading zeros are rejected because bash would read the number as octal.
 - Study already archived. Please verify name of the study.
     - Same archive already exists in `ARCHIVE_DIR`.
 - Error: Tarball not found: ... / The reads can only be restored from the source tarballs. Not archiving.
