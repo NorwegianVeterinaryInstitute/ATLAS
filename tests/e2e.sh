@@ -342,6 +342,13 @@ step "creates study four" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "
 check "2 .fq.gz data symlinks" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 2
 check "no literal glob link" test ! -L "${PROJ_DIR}/${PROJ}/${STUDY4}/data/*fastq.gz"
 step "refuses existing study" 1 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS1"
+## A file missing from the data directory stops create_study, which removes
+## the half-built study instead of reporting success (#73)
+mv "${DSM}/transferred_reads.txt" "${ROOT}/matching_reads.moved"
+step "create_study fails on a missing data file" 1 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d TestProj_matching_20240117
+mv "${ROOT}/matching_reads.moved" "${DSM}/transferred_reads.txt"
+check "no success reported" bash -c "! grep -q 'complete' '$(last_log)'"
+check "half-built study removed" test ! -e "${PROJ_DIR}/${PROJ}/study_TestProj_matching_20240117"
 
 # Append to an existing study: prompt, conflict check, new reads linked
 printf "\nactivate_data.sh -a (append)\n"

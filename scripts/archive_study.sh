@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eo pipefail
 
 # Script for archiving studies.
 # The script will create a tarball of the
@@ -127,7 +127,7 @@ fi
 
 ## Prompt user for archive process confirmation
 printf "You are about to archive the study '%s' from project '%s' to %s.\n" "$study_dir" "$proj_name" "$ARCHIVE_DIR"
-read -r -p "Start the archiving process? (y/n): " response
+read -r -p "Start the archiving process? (y/n): " response || true
 if [[ "$response" != "y" && "$response" != "Y" ]]; then
     printf "Archiving cancelled.\n"
     exit 1
@@ -141,7 +141,7 @@ size_gb=$((size_mb / 1024))
 if (( size_gb > threshold )); then
     printf "Warning: Experiment directory '%s' is very large (~%dGB).\n" "$study_dir" "$size_gb"
     printf "Please consider removing additional redundant or intermediary files.\n"
-    read -r -p "Continue archiving anyway? (y/n): " response
+    read -r -p "Continue archiving anyway? (y/n): " response || true
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         printf "Archiving cancelled.\n"
         exit 1
@@ -223,7 +223,10 @@ fi
 
 # Check tarball checksum after transfer
 printf "Verifying checksum after transfer...\n"
-hash_post="$(/usr/bin/sha512sum "${ARCHIVE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')"
+## A failed hash counts as a mismatch, so the copy is removed below
+if ! hash_post="$(/usr/bin/sha512sum "${ARCHIVE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')"; then
+    hash_post=""
+fi
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     printf "Checksums are equal, transfer complete!\n"

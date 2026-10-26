@@ -147,8 +147,14 @@ transfer_files() {
     local loopcount=0
     local failed=0
     local sample_found
-    local name tarball tarpath reads i base dir
+    local name tarball tarpath reads i base dir read_list
     local -a tarball_array
+
+    if $append_mode; then
+        read_list=appended_reads.txt
+    else
+        read_list=transferred_reads.txt
+    fi
 
     printf "Transferring files...\n"
 
@@ -191,12 +197,15 @@ transfer_files() {
                         failed=1
                         continue
                     fi
-                    /usr/bin/chmod 444 "$base"
-                    /usr/bin/sha512sum "$base" >> sha512sums.txt
-                    if $append_mode; then
-                        printf "%s\n" "$base" >> appended_reads.txt
-                    else
-                        printf "%s\n" "$base" >> transferred_reads.txt
+                    # Callers run this function in an if, where set -e does
+                    # not apply, so these writes are checked by hand. A read
+                    # only counts once its checksum and list entry are in.
+                    if ! /usr/bin/chmod 444 "$base" ||
+                        ! /usr/bin/sha512sum "$base" >> sha512sums.txt ||
+                        ! printf "%s\n" "$base" >> "$read_list"; then
+                        printf "Error: Could not record %s in sha512sums.txt or %s\n" "$base" "$read_list" >&2
+                        failed=1
+                        continue
                     fi
                     loopcount=$((loopcount + 1))
                 done <<< "$reads"
@@ -213,7 +222,10 @@ transfer_files() {
                 tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
                 if [[ -z "$(list_reads "$tarpath" "$name")" ]]; then
                     printf "Warning: Sample %s not found in tarball %s (but found in others)\n" "$name" "$tarpath"
-                    printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv
+                    if ! printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv; then
+                        printf "Error: Could not record %s in missing_in_some_tarballs.csv\n" "$name" >&2
+                        failed=1
+                    fi
                 fi
             done
         fi

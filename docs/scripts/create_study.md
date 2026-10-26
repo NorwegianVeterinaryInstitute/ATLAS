@@ -63,3 +63,5 @@ A study directory will be created under `${PROJ_DIR}/${PROJECT_NAME}`, with the 
     - Data directory under `ACTIVE_DATA_DIR` not found.
 - Output study directory already exists.
     - Target study path already exists.
+- Error: Could not create the study; removed ...
+    - A copy, link or directory could not be created (for example a file missing from the data directory, or no write access). The half-built study is removed; fix the problem and rerun.

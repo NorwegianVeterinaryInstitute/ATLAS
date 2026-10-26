@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 # Script used to generate study directories
 # under a specific project directory, connected
 # to the directory created with the activate script
@@ -109,6 +111,9 @@ fi
 # Create output dir and populate
 printf "Creating output directory and populating files...\n"
 /usr/bin/mkdir "$study"
+## The study was checked not to exist, so a failure from here on removes
+## only what this run created, and the script can simply be rerun
+trap 'printf "Error: Could not create the study; removed %s.\n" "$study" >&2; /usr/bin/rm -rf "${study:?}"' EXIT
 /usr/bin/cp "$readme" "${study}/README.txt"
 /usr/bin/cp "${study_data}/info.txt" "${study}/data_info.txt"
 /usr/bin/cp "${study_data}/data.csv" "${study}"
@@ -126,6 +131,7 @@ printf "Creating subdirectories...\n"
 /usr/bin/mkdir "${study}/sandbox"
 /usr/bin/mkdir "${study}/results"
 /usr/bin/mkdir "${study}/scripts"
+trap - EXIT
 
 printf "Creation of study directory complete!\n"
 printf "Make sure to fill out the README.txt file in the output directory.\n"
