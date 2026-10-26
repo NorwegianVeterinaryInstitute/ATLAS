@@ -135,6 +135,6 @@ And copies updated files to the connected study directory at:
 - Error: Sample <name> not found in <tarball>
     - The sample has no reads in its tarball(s): check the sample name. Nothing is changed.
 - Error: Expected N reads, but transferred M
-    - Some reads were not extracted. Earlier errors give the cause. Nothing is kept: a new output directory is removed, and an append leaves the existing directory unchanged.
+    - Some reads were not extracted. Earlier errors give the cause. Nothing is kept: the new output directory is removed, and an append leaves the existing directory unchanged.
 - Error: Could not create .../.append_in_progress...
     - An earlier append was interrupted. Remove that directory and rerun.
