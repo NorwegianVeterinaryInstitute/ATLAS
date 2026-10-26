@@ -230,7 +230,11 @@ if $append; then
     # when all of them are there, so a failed append leaves dest unchanged
     staging="${dest}/.append_in_progress"
     if ! /usr/bin/mkdir "$staging"; then
-        printf "Error: Could not create %s. If an earlier append was interrupted, remove it and rerun.\n" "$staging" >&2
+        if [[ -e "$staging" ]]; then
+            printf "Error: %s already exists. An earlier append was interrupted; remove it and rerun.\n" "$staging" >&2
+        else
+            printf "Error: Could not create %s. Check that you can write to %s.\n" "$staging" "$dest" >&2
+        fi
         exit 1
     fi
     trap '/usr/bin/rm -rf "${staging:?}"' EXIT
