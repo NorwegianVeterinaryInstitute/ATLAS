@@ -133,7 +133,7 @@ if ! frozen_csv=$(/usr/bin/tar -xzOf "$frozen" "${study_dir}/data.csv" | /usr/bi
 fi
 
 if ! check_tarballs <(printf "%s\n" "$frozen_csv") false; then
-    printf "Thawing needs the source tarballs. Nothing was changed.\n" >&2
+    printf "One or more source tarballs missing. Please check.\n" >&2
     exit 1
 fi
 
