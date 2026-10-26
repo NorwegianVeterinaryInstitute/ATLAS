@@ -386,8 +386,8 @@ step "refuses when a source tarball is missing" 1 "y\n" bash "${SCRIPTS}/freeze_
 mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
 check "study kept when source tarball missing" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "freeze check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
-## A data.csv row whose sample has no reads, as studies activated before
-## #78 can have: the study could not be thawed, so freeze refuses it
+## A data.csv row whose sample has no reads: the study could not be
+## thawed, so freeze refuses it
 cp "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" "${ROOT}/study1_data.orig"
 printf 'sampleZ,%s\n' "${RAW_DIR}/run1.tar" >> "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv"
 step "refuses data.csv sample without reads" 1 "y\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
