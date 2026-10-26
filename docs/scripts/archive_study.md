@@ -70,7 +70,7 @@ In project storage:
 - Error: Tarball not found: ... / The reads can only be restored from the source tarballs. Not archiving.
     - A source tarball in the study's `data.csv` has moved or been deleted.
 - Error: Sample <name> not found in ...
-    - A sample in the study's `data.csv` has no reads in its tarball(s), so they could not be restored. Studies activated before missing samples stopped activation can have such rows; remove them from `data.csv` (in the study and in `ACTIVE_DATA_DIR`) and rerun.
+    - A sample in the study's `data.csv` has no reads in its tarball(s), so they could not be restored. Remove such rows from `data.csv` (in the study and in `ACTIVE_DATA_DIR`) and rerun.
 - The `sandbox` directory is still present in the study.
     - Cleanup requirement not satisfied.
 - The `results` directory is not present in the study.
