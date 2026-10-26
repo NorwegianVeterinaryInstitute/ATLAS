@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.4.0](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.4...v1.4.0) (2026-10-26)
+
+
+### Features
+
+* add check_dependencies.sh to check required tools ([#90](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/90)) ([580f07e](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/580f07e2d06853d2e5359bdc9e71f798b4ce6955))
+
+
+### Bug Fixes
+
+* check targets before freeze and archive ([#110](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/110)) ([1639d09](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/1639d09f3f040be2a87b410fe56e78151d44ad65))
+* fail when samples or reads are missing ([#114](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/114)) ([3c3f339](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/3c3f339bee42e1a3dbf3a89d4d59c547df3384bb))
+* handle trailing commas and old data.csv ([#119](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/119)) ([31716f0](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/31716f0e89a7b60abd28ec60ed1e4bdd5245ae42))
+* help text, stale names and printf style ([#97](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/97)) ([9b57749](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/9b577497af2ab19315383225d2e0eddb3473dda4))
+* keep frozen copy until thaw is verified ([#111](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/111)) ([431bc3e](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/431bc3e3b727bf5b4754bbdd1584e414d76c943f))
+* link .fq.gz reads into the study ([#107](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/107)) ([fda76e3](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/fda76e3289a47b6e0eb0f3ba43600b7728770160))
+* list reads by name in tar archives ([#108](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/108)) ([aa4c3d4](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/aa4c3d466622fb22a3621d47da0fc772bfbb4ecc))
+* refuse reads that would overwrite each other ([#113](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/113)) ([20c410c](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/20c410cbfd3f01158028a39c28cf9191e59b1645))
+* reliable csv input ([#105](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/105)) ([a854ba1](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/a854ba1962510536a6e00e2cc6e8fff910c0835c))
+* stop on errors in all scripts ([#118](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/118)) ([9d43d5b](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/9d43d5bfb48c9e42449e117b20eea68a75d6cf32))
+
 ## [1.3.4](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.3...v1.3.4) (2026-10-06)
 
 
