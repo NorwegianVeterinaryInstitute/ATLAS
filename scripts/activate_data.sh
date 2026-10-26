@@ -193,7 +193,7 @@ if $append; then
         exit 1
     fi
     if ! conflicts=$(find_append_conflicts <(csv_rows) "${dest}/data.csv"); then
-        printf "Error: these sample/tarball combinations already exist:\n"
+        printf "Error: these sample/tarball combinations already exist in the study:\n"
         printf '%s\n' "$conflicts"
         exit 1
     fi
