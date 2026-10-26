@@ -3,7 +3,7 @@
 ## Purpose
 Freeze a study by packaging it into a tarball, copying it to freezer storage, verifying integrity, and removing local study/data after successful transfer. Note: This is NOT the same as permanent archiving of a project. Please see [archive_study.sh](archive_study.md) for more information on archiving studies.
 #### File deletion warning:
-The script will delete the local study directory after successful freeze, as well as the connected active data directory in `ACTIVE_DATA_DIR/study_${study_dir}`. This is done by design, as the data will be reconstituted when thawing the study with `thaw_study.sh`.
+The script will delete the local study directory after successful freeze, as well as the connected active data directory in `ACTIVE_DATA_DIR/study_${study_dir}`. This is done by design, as the data will be reconstituted when thawing the study with `thaw_study.sh`. The script asks for confirmation first; use `-y` to skip the prompt in scripts.
 
 #### Source tarballs must stay in place
 The frozen study holds links to the reads, not the reads themselves. Thawing extracts the reads again from the source tarballs listed in the study's `data.csv`, so the script checks that they all exist before freezing, and refuses otherwise.
@@ -34,7 +34,7 @@ Use this script when a study is paused long-term and should be moved out of acti
 ## Output
 
 - Freezer archive: `FREEZE_DIR/study_dir.tar.gz`
-- Updated study-level log: `PROJ_DIR/project_name/study_dir/stash_log.txt
+- Updated study-level log, inside the archive: `PROJ_DIR/project_name/study_dir/freeze_log.txt`
 - Updated project log: `PROJ_DIR/project_name/freeze_log.txt`
 - Updated freezer log: `FREEZE_DIR/freeze_log.txt`
 
@@ -54,6 +54,8 @@ Use this script when a study is paused long-term and should be moved out of acti
     - Target archive already exists in FREEZE_DIR.
 - Error: Tarball not found: ... / Thawing needs the source tarballs. Not freezing.
     - A source tarball in the study's `data.csv` has moved or been deleted.
+- Freezing cancelled.
+    - The prompt was not answered with `y`.
 - Error: Archive verification failed. Deleting corrupt archive.
     - Tarball could not be read.
 - rsync failed with exit code X

@@ -10,6 +10,7 @@ FREEZE_DIR=""
 ARCHIVE_DIR=""
 # The directory that the various README templates used in ATLAS are held
 TEMPLATE_DIR=""
-# The size of the study (in gb) above which the archive_study.sh script 
-# will prompt the user to confirm before proceeding with archiving
-ARCHIVE_SIZE_THRESHOLD_GB="value"
+# The size of the study (in GB, a whole number) above which the
+# archive_study.sh script will prompt the user to confirm before
+# proceeding with archiving
+ARCHIVE_SIZE_THRESHOLD_GB="250"

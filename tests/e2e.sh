@@ -192,10 +192,13 @@ printf 'sample,tarball\nsampleF,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq_append
 printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
     "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
 
-## Configs with a missing freezer or archive directory (#72). Later
-## assignments win.
+## Configs with a missing freezer or archive directory (#72) and a size
+## threshold that is not a number or has a leading zero, which bash reads
+## as octal (#81). Later assignments win.
 { cat "$ATLAS_CONFIG"; printf 'FREEZE_DIR="%s"\n' "${ROOT}/no_freezer"; } > "${ROOT}/config_no_freezer.sh"
 { cat "$ATLAS_CONFIG"; printf 'ARCHIVE_DIR="%s"\n' "${ROOT}/no_archive"; } > "${ROOT}/config_no_archive.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_SIZE_THRESHOLD_GB="value"\n'; } > "${ROOT}/config_bad_threshold.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_SIZE_THRESHOLD_GB="080"\n'; } > "${ROOT}/config_octal_threshold.sh"
 
 # Test helpers
 pass=0
@@ -223,6 +226,11 @@ step() {
         fail=$((fail + 1))
         failed_steps+=("$desc")
     fi
+}
+
+# Path of the log written by the last step, to check its messages
+last_log() {
+    printf "%s/%02d.log" "$LOGS" "$step_no"
 }
 
 # check DESCRIPTION TEST-EXPRESSION...
@@ -336,31 +344,69 @@ check "data.csv has 3 samples on separate lines" test "$(tail -n +2 "${PROJ_DIR}
 step "appends .fq.gz reads" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/fq_append.csv" -d "$DS4"
 check "4 .fq.gz data symlinks after append" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 4
 
-# Freeze: checks, study packed into the freezer, study and active data
-# removed
+# Freeze: checks, prompt, study packed into the freezer, study and active
+# data removed
 printf "\nfreeze_study.sh\n"
 mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
-step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+step "refuses when a source tarball is missing" 1 "y\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
 check "study kept when source tarball missing" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
-step "refuses missing freezer dir" 1 "" env ATLAS_CONFIG="${ROOT}/config_no_freezer.sh" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "freeze check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
+step "refuses missing freezer dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_freezer.sh" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 check "no file created at freezer path" test ! -e "${ROOT}/no_freezer"
-step "freezes study one" 0 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+step "freeze cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "study kept after cancel" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+step "freezes study one with -y" 0 "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY1"
 check "tarball in freezer" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "study dir removed" test ! -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data removed" test ! -d "${ACTIVE_DATA_DIR}/${DS1}"
+check "freezer log names the project" grep -q "^${PROJ}"$'\t'"${STUDY1}"$'\t' "${FREEZE_DIR}/freeze_log.txt"
 
-# Thaw: study unpacked and active data re-created from the source tarballs
+# Thaw: study unpacked and active data re-created from the source tarballs.
+# Checks run before anything is written; a later failure removes what the
+# run created and keeps the frozen copy.
 printf "\nthaw_study.sh\n"
+mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
+step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
+check "study not unpacked when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "no tarball copied when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "thaw check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
+check "freezer tarball kept after refused thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+mkdir "${ACTIVE_DATA_DIR}/${DS1}"
+step "refuses when active data dir exists" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+check "existing active data dir left alone" test -d "${ACTIVE_DATA_DIR}/${DS1}"
+check "study not unpacked when active data dir exists" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+rmdir "${ACTIVE_DATA_DIR}/${DS1}"
+## Late failure: a frozen study whose sha512sums.txt does not match the
+## reads fails at the final comparison
+cp "${FREEZE_DIR}/${STUDY1}.tar.gz" "${ROOT}/frozen.orig"
+mkdir "${ROOT}/tamper"
+tar -xzf "${ROOT}/frozen.orig" -C "${ROOT}/tamper"
+sed -i '1s/^./x/' "${ROOT}/tamper/${STUDY1}/sha512sums.txt"
+tar -czf "${FREEZE_DIR}/${STUDY1}.tar.gz" -C "${ROOT}/tamper" "$STUDY1"
+step "fails when restored reads do not match" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+check "study dir removed after failed thaw" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "copied tarball removed after failed thaw" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "active data removed after failed thaw" test ! -e "${ACTIVE_DATA_DIR}/${DS1}"
+check "freezer tarball kept after failed thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+check "failed thaw not logged" test ! -s "${FREEZE_DIR}/thaw_log.txt"
+mv "${ROOT}/frozen.orig" "${FREEZE_DIR}/${STUDY1}.tar.gz"
 step "thaws study one" 0 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
 check "study dir restored" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data restored (6 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "freezer tarball removed" test ! -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+check "thaw logged" grep -q "$STUDY1" "${FREEZE_DIR}/thaw_log.txt"
 
 # Archive: checks, prompt, sandbox refusal, tarball in archive, cleanup, log
 printf "\narchive_study.sh\n"
 step "refuses missing archive dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_archive.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 check "no file created at archive path" test ! -e "${ROOT}/no_archive"
+## The study still has sandbox/, which also exits 1: check the message
+step "rejects non-numeric size threshold" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_bad_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "non-numeric threshold reported" grep -q "must be a whole number" "$(last_log)"
+step "rejects size threshold with leading zero" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_octal_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "leading-zero threshold reported" grep -q "must be a whole number" "$(last_log)"
 step "archive cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 step "refuses while sandbox present" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 
