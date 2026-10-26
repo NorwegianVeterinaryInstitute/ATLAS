@@ -41,6 +41,7 @@ Supported patterns:
 - Multiple tarballs in second field, comma separated and under one quote
 - Empty lines
 - Windows (CRLF) line endings and a missing newline after the last line
+- Trailing commas, as spreadsheets add for empty columns
 
 Examples:
 

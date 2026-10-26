@@ -181,6 +181,9 @@ printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run2.tar" > "${ROOT}/study1_ap
 ## study2.csv has its own header names, headerless.csv has none (#77)
 printf 'Sample ID,Tarball path\nsampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/study2.csv"
 printf 'sampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/headerless.csv"
+## Spreadsheets add trailing commas for empty columns (#115)
+printf 'sampleD,%s,\n' "${RAW_DIR}/run3.tar" > "${ROOT}/headerless_comma.csv"
+printf '"sampleD","%s",,\n' "${RAW_DIR}/run3.tar" > "${ROOT}/quoted_comma.csv"
 printf 'sample,tarball\n"",""\n' > "${ROOT}/no_samples.csv"
 printf 'sample,tarball\nsampleX,%s\n' "${RAW_DIR}/missing.tar" > "${ROOT}/missing.csv"
 ## Saved as Excel or a text editor may save it: CRLF line endings and no
@@ -314,6 +317,10 @@ step "fails on CSV without samples" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "
 check "no output dir for CSV without samples" test ! -d "${ACTIVE_DATA_DIR}/TestProj_nosamples_20240101"
 step "activates CSV without trailing newline" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_newline.csv" -d "$DS3"
 check "last row of CSV not dropped (4 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS3}" '*.fastq.gz')" -eq 4
+step "activates headerless CSV with trailing comma" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/headerless_comma.csv" -d TestProj_comma_20240122
+check "first row kept despite trailing comma (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_comma_20240122" '*.fastq.gz')" -eq 2
+step "activates quoted CSV with trailing commas" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/quoted_comma.csv" -d TestProj_quotedcomma_20240123
+check "quoted row with trailing commas kept (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_quotedcomma_20240123" '*.fastq.gz')" -eq 2
 check "input CSV left untouched" cmp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
 DSM="${ACTIVE_DATA_DIR}/TestProj_matching_20240117"
 step "activates tarball with spaces in group" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/matching.csv" -d TestProj_matching_20240117
@@ -382,6 +389,10 @@ check "still 6 checksums after refused append" test "$(grep -c . "${ACTIVE_DATA_
 ## appended row must start on its own line, not be glued to the last one
 step "appends to study from CSV without newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/study1_append.csv" -d "$DS3"
 check "data.csv has 3 samples on separate lines" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY3}/data.csv" | grep -c .)" -eq 3
+## A data.csv written before #105 can lack its final newline (#115)
+truncate -s -1 "${ACTIVE_DATA_DIR}/${DS3}/data.csv"
+step "appends to data.csv without final newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/headerless.csv" -d "$DS3"
+check "appended row on its own line" test "$(grep -c '^sample[A-D],' "${PROJ_DIR}/${PROJ}/${STUDY3}/data.csv")" -eq 4
 step "appends .fq.gz reads" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/fq_append.csv" -d "$DS4"
 check "4 .fq.gz data symlinks after append" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 4
 

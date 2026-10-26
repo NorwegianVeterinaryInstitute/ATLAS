@@ -151,8 +151,10 @@ fi
 
 # Read the CSV into memory with Unix line endings, leaving the user's file
 # untouched. $(...) drops trailing newlines; csv_rows adds exactly one back,
-# so every copy ends with a newline even if the file did not.
-csv_data=$(/usr/bin/dos2unix < "$csvfile")
+# so every copy ends with a newline even if the file did not. Trailing commas
+# and spaces are dropped too: spreadsheets add empty columns when the sheet is
+# wider than two columns, which would hide the .tar at the end of line 1.
+csv_data=$(/usr/bin/dos2unix < "$csvfile" | /usr/bin/sed 's/[,[:space:]]*$//')
 
 # The header is optional. Line 1 is a data row if its tarball field ends in
 # .tar, otherwise it is a header and dropped. csv_rows always puts a fixed
@@ -253,7 +255,14 @@ if $append; then
     # access to the files; replacing them can fail in a shared directory.
     # Record the list sizes first, so a failure can undo the appends, and
     # remove the moved reads, which were checked not to exist in dest.
-    if ! csv_rows | /usr/bin/tail -n +2 > data.csv; then
+    # A data.csv written before every copy got a final newline may lack
+    # one; start the new rows on their own line instead of gluing the first
+    # onto the last existing row.
+    newline=""
+    if [[ -s "${dest}/data.csv" && -n "$(/usr/bin/tail -c1 "${dest}/data.csv")" ]]; then
+        newline=$'\n'
+    fi
+    if ! { printf "%s" "$newline"; csv_rows | /usr/bin/tail -n +2; } > data.csv; then
         printf "Error: Could not write the new data.csv rows. Nothing was changed in %s or the study.\n" "$dest" >&2
         exit 1
     fi
