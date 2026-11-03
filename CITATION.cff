@@ -16,6 +16,7 @@ authors:
     orcid: "https://orcid.org/0009-0005-7773-7718"
     affiliation: Norwegian Veterinary Institute
 version: 1.4.1 # x-release-please-version
+doi: https://doi.org/10.5281/zenodo.23911455
 license: BSD-3-Clause
 repository-code: "https://github.com/NorwegianVeterinaryInstitute/ATLAS"
 url: "https://norwegianveterinaryinstitute.github.io/ATLAS/"
