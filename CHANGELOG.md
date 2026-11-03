@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.4.0...v1.4.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* zenodo release doi ([#122](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/122)) ([f6157c3](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/f6157c38cf452c402139e062e6a7c29b59340639))
+
 ## [1.4.0](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.3.4...v1.4.0) (2026-10-26)
 
 
