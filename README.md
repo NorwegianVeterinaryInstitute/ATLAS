@@ -1,4 +1,5 @@
 ![GitHub release](https://img.shields.io/github/v/release/NorwegianVeterinaryInstitute/ATLAS)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23911455.svg)](https://doi.org/10.5281/zenodo.23911455)
 
 <p align="center"><img src="docs/img/atlas_logo.png" alt="ATLAS" width="600"></p>
 
