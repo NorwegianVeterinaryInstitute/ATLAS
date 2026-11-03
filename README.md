@@ -8,4 +8,4 @@ ATLAS (Automated Transfer, Logging, Archiving, and Structures), is a workflow co
 
 ATLAS is developed at the [Norwegian Veterinary Institute](https://ror.org/05m6y3182) (ROR: `05m6y3182`).
 
-If you use ATLAS, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff); use the "Cite this repository" button on GitHub to get APA or BibTeX, or refer to the Zenodo DOI.
+If you use ATLAS, please cite it. Citation metadata is in [CITATION.cff](CITATION.cff); use the "Cite this repository" button on GitHub to get APA or BibTeX, or refer to the Zenodo DOI identifier.
