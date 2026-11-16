@@ -5,7 +5,7 @@ Restore a previously frozen study from freezer storage back into a project direc
 
 The reads are extracted again from the source tarballs listed in the study's `data.csv`. The source tarballs are checked before anything is copied or unpacked. The tarball in `FREEZE_DIR` is removed, and the thaw logged, only after the restored reads match their checksums. If a later step fails, the frozen copy is kept and the study and active data directories created by the run are removed, so you can fix the problem and rerun.
 
-The links in the study's `data/` point at the reads under the `ACTIVE_DATA_DIR` that was set when the study was made. Thaw links them again to the restored reads, so a study still thaws correctly if `ACTIVE_DATA_DIR` has changed since it was frozen.
+The links in the study's `data/` point at the reads under the `ACTIVE_DATA_DIR` that was set when the study was made. Thaw links them again to the restored reads, so a study still thaws correctly if `ACTIVE_DATA_DIR` has changed since it was frozen, even if a copy of the reads is left at the old path.
 
 ## When to use
 Use this script when you need a frozen study available again for analysis or archiving.

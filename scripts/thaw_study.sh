@@ -204,9 +204,9 @@ if [[ -n "${test}" ]]; then
 fi
 
 ## The links in data/ hold the ACTIVE_DATA_DIR of the time the study was
-## made. If that has changed, they point at nothing: link them to the
-## reads just restored.
-if ! link_reads "$active_dir" "${fullpath}/data"; then
+## made. If that has changed, they point at nothing, or at an old copy that
+## may be removed later: link them to the reads just restored.
+if ! link_reads "$active_dir" "${fullpath}/data" true; then
     printf "Error: Could not link the restored reads into %s\n" "${fullpath}/data" >&2
     exit 1
 fi

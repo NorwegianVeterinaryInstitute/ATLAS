@@ -459,10 +459,17 @@ check "freezer tarball removed" test ! -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "thaw logged" grep -q "$STUDY1" "${FREEZE_DIR}/thaw_log.txt"
 check "data links resolve after thaw" test "$(find "${PROJ_DIR}/${PROJ}/${STUDY1}/data" -xtype l | wc -l)" -eq 0
 ## ACTIVE_DATA_DIR changed between freeze and thaw (#109): the frozen links
-## point at the old path, so thaw must link the restored reads again. A link
-## to something thaw does not restore is reported and kept.
+## point at the old path, so thaw must link the restored reads again, also
+## when a copy is left at the old path. A link to something thaw does not
+## restore is reported and kept.
 ln -s "${ROOT}/gone/sampleX_R1.fq.gz" "${PROJ_DIR}/${PROJ}/${STUDY4}/data/"
 step "freezes study four" 0 "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY4"
+## Setup, not a test: a copy left at the old path, as after copying
+## ACTIVE_DATA_DIR to new storage
+mkdir "${ACTIVE_DATA_DIR}/${DS4}"
+for r in sampleE_R1 sampleE_R2 sampleF_R1 sampleF_R2; do
+    touch "${ACTIVE_DATA_DIR}/${DS4}/${r}.fq.gz"
+done
 mkdir "${ROOT}/active_moved"
 { cat "$ATLAS_CONFIG"; printf 'ACTIVE_DATA_DIR="%s"\n' "${ROOT}/active_moved"; } > "${ROOT}/config_moved_active.sh"
 step "thaws study four after ACTIVE_DATA_DIR moved" 0 "" env ATLAS_CONFIG="${ROOT}/config_moved_active.sh" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY4"
