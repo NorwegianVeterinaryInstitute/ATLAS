@@ -292,17 +292,23 @@ find_append_conflicts() {
 
 # Link every read file (*.fastq.gz, *.fq.gz) in src_dir into dst_dir.
 # Reads that are already linked are skipped, so append mode can link the
-# whole directory again. Any other failure to link is an error.
+# whole directory again. A broken link with the read's name is replaced,
+# so thaw can repair links that point at an old ACTIVE_DATA_DIR. Anything
+# else in the way, or any other failure to link, is an error.
 link_reads() {
     local src_dir="$1"
     local dst_dir="$2"
-    local f
+    local f link
     local failed=0
 
     for f in "$src_dir"/*.fastq.gz "$src_dir"/*.fq.gz; do
         # An unmatched glob stays literal
         [[ -e "$f" ]] || continue
-        [[ -L "${dst_dir}/${f##*/}" ]] && continue
+        link="${dst_dir}/${f##*/}"
+        if [[ -L "$link" ]]; then
+            [[ -e "$link" ]] && continue
+            /usr/bin/rm -f "$link" || { failed=1; continue; }
+        fi
         /usr/bin/ln -s "$f" "$dst_dir/" || failed=1
     done
 

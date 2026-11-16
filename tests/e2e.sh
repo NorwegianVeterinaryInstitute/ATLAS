@@ -457,6 +457,19 @@ check "study dir restored" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data restored (6 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "freezer tarball removed" test ! -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "thaw logged" grep -q "$STUDY1" "${FREEZE_DIR}/thaw_log.txt"
+check "data links resolve after thaw" test "$(find "${PROJ_DIR}/${PROJ}/${STUDY1}/data" -xtype l | wc -l)" -eq 0
+## ACTIVE_DATA_DIR changed between freeze and thaw (#109): the frozen links
+## point at the old path, so thaw must link the restored reads again. A link
+## to something thaw does not restore is reported and kept.
+ln -s "${ROOT}/gone/sampleX_R1.fq.gz" "${PROJ_DIR}/${PROJ}/${STUDY4}/data/"
+step "freezes study four" 0 "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY4"
+mkdir "${ROOT}/active_moved"
+{ cat "$ATLAS_CONFIG"; printf 'ACTIVE_DATA_DIR="%s"\n' "${ROOT}/active_moved"; } > "${ROOT}/config_moved_active.sh"
+step "thaws study four after ACTIVE_DATA_DIR moved" 0 "" env ATLAS_CONFIG="${ROOT}/config_moved_active.sh" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY4"
+check "reads restored under the new ACTIVE_DATA_DIR (4 fq)" test "$(count_files "${ROOT}/active_moved/${DS4}" '*.fq.gz')" -eq 4
+check "data links point at the new ACTIVE_DATA_DIR" test "$(find "${PROJ_DIR}/${PROJ}/${STUDY4}/data" -lname "${ROOT}/active_moved/${DS4}/*" | wc -l)" -eq 4
+check "stray broken link reported" grep -q "sampleX_R1.fq.gz -> ${ROOT}/gone/sampleX_R1.fq.gz" "$(last_log)"
+check "stray broken link kept" test -L "${PROJ_DIR}/${PROJ}/${STUDY4}/data/sampleX_R1.fq.gz"
 
 # Archive: checks, prompt, sandbox refusal, tarball in archive, cleanup, log
 printf "\narchive_study.sh\n"
