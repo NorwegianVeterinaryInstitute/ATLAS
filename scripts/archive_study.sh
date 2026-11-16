@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eo pipefail
 
 # Script for archiving studies.
 # The script will create a tarball of the
@@ -26,6 +26,7 @@ DESCRIPTION:
     - Warns if directory size exceeds ARCHIVE_SIZE_THRESHOLD_GB
     - Verifies that sandbox directory has been removed
     - Verifies that results and data directories are present
+    - Checks that the source tarballs in the study's data.csv still exist
     - Creates a tarball of the study directory
     - Verifies the tarball integrity
     - Transfers the archive to the archive directory (ARCHIVE_DIR)
@@ -37,6 +38,9 @@ REQUIREMENTS:
     - Sandbox directory must be removed before archiving
     - Results directory must be present
     - Data directory must be present
+    - The source tarballs in data.csv must exist: the archived study holds
+      links to the reads, not the reads themselves, so the reads can only
+      be restored from those tarballs
 
 EXAMPLE:
     atlas archive_study -s study_mydata_20231120 -p myproject
@@ -80,6 +84,8 @@ if [[ -z "$proj_name" ]]; then
 fi
 
 # Get input and set variables
+## Get script dir
+SCRIPT_DIR="$(cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "${BASH_SOURCE[0]}")")" && pwd -P)"
 ## Get config variables
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
@@ -90,6 +96,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/lib.sh"
 
 proj_fullpath="${PROJ_DIR}/${proj_name}"
 fullpath="${PROJ_DIR}/${proj_name}/${study_dir}"
@@ -106,9 +114,21 @@ if [[ ! -d "$fullpath" ]]; then
     exit 1
 fi
 
+## Without this check, rsync would create a file named after the directory
+if [[ ! -d "$ARCHIVE_DIR" ]]; then
+    printf "Archive directory does not exist: %s\n" "$ARCHIVE_DIR" >&2
+    exit 1
+fi
+
+threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
+if [[ ! "$threshold" =~ ^(0|[1-9][0-9]*)$ ]]; then
+    printf "Error: ARCHIVE_SIZE_THRESHOLD_GB must be a whole number of GB, not '%s'.\n" "$threshold" >&2
+    exit 1
+fi
+
 ## Prompt user for archive process confirmation
 printf "You are about to archive the study '%s' from project '%s' to %s.\n" "$study_dir" "$proj_name" "$ARCHIVE_DIR"
-read -r -p "Start the archiving process? (y/n): " response
+read -r -p "Start the archiving process? (y/n): " response || true
 if [[ "$response" != "y" && "$response" != "Y" ]]; then
     printf "Archiving cancelled.\n"
     exit 1
@@ -119,12 +139,10 @@ size_kb=$(/usr/bin/du -s "$fullpath" | /usr/bin/awk '{print $1}')
 size_mb=$((size_kb / 1024))
 size_gb=$((size_mb / 1024))
 
-threshold="${ARCHIVE_SIZE_THRESHOLD_GB:-250}"
-
 if (( size_gb > threshold )); then
     printf "Warning: Experiment directory '%s' is very large (~%dGB).\n" "$study_dir" "$size_gb"
     printf "Please consider removing additional redundant or intermediary files.\n"
-    read -r -p "Continue archiving anyway? (y/n): " response
+    read -r -p "Continue archiving anyway? (y/n): " response || true
     if [[ "$response" != "y" && "$response" != "Y" ]]; then
         printf "Archiving cancelled.\n"
         exit 1
@@ -159,6 +177,16 @@ if [[ -f "${ARCHIVE_DIR}/${study_dir}.tar.gz" ]]; then
     exit 1
 fi
 
+## The reads can only be restored from the source tarballs
+if [[ ! -f "${fullpath}/data.csv" ]]; then
+    printf "Error: %s not found; cannot check the source tarballs.\n" "${fullpath}/data.csv" >&2
+    exit 1
+fi
+if ! check_tarballs "${fullpath}/data.csv" false; then
+    printf "The reads can only be restored from the source tarballs. Not archiving.\n" >&2
+    exit 1
+fi
+
 # Create experiment tarball
 printf "All checks passed, creating tarball...\n"
 cd "$proj_fullpath"
@@ -182,7 +210,7 @@ hash_pre="$(/usr/bin/sha512sum "${study_dir}.tar.gz" | awk '{print $1}')"
 printf "Moving archive to the archive directory...\n"
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "$ARCHIVE_DIR" 2> "$rsync_err_file"; then
+if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "${ARCHIVE_DIR}/" 2> "$rsync_err_file"; then
     /usr/bin/rm -f "${rsync_err_file:?}"
 else
     status=$?
@@ -196,7 +224,10 @@ fi
 
 # Check tarball checksum after transfer
 printf "Verifying checksum after transfer...\n"
-hash_post="$(/usr/bin/sha512sum "${ARCHIVE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')"
+## A failed hash counts as a mismatch, so the copy is removed below
+if ! hash_post="$(/usr/bin/sha512sum "${ARCHIVE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')"; then
+    hash_post=""
+fi
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     printf "Checksums are equal, transfer complete!\n"

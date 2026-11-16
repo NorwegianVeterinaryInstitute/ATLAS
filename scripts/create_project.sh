@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 # Script used to create a project directory in $PROJ_DIR
 
 # Help function

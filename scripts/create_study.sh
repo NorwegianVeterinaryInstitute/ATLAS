@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 # Script used to generate study directories
 # under a specific project directory, connected
 # to the directory created with the activate script
@@ -71,6 +73,8 @@ if [[ -z "$proj_name" ]]; then
 fi
 
 ## Create dir variables
+## Get script dir
+SCRIPT_DIR="$(cd -- "$(/usr/bin/dirname -- "$(/usr/bin/readlink -f -- "${BASH_SOURCE[0]}")")" && pwd -P)"
 ## Get config variables
 CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
@@ -81,6 +85,8 @@ CONFIG_FILE="${ATLAS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/atlas/config.sh}"
 
 # shellcheck source=/dev/null
 source "$CONFIG_FILE"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/lib.sh"
 
 dest="${PROJ_DIR}/${proj_name}"
 study_data="${ACTIVE_DATA_DIR}/${study_data}"
@@ -106,6 +112,9 @@ fi
 # Create output dir and populate
 printf "Creating output directory and populating files...\n"
 /usr/bin/mkdir "$study"
+## The study was checked not to exist, so a failure from here on removes
+## only what this run created, and the script can simply be rerun
+trap 'printf "Error: Could not create the study; removed %s.\n" "$study" >&2; /usr/bin/rm -rf "${study:?}"' EXIT
 /usr/bin/cp "$readme" "${study}/README.txt"
 /usr/bin/cp "${study_data}/info.txt" "${study}/data_info.txt"
 /usr/bin/cp "${study_data}/data.csv" "${study}"
@@ -114,12 +123,16 @@ printf "Creating output directory and populating files...\n"
 
 printf "Creating symbolic links to read files...\n"
 /usr/bin/mkdir "${study}/data"
-/usr/bin/ln -s "${study_data}"/*fastq.gz "${study}/data"
+if ! link_reads "$study_data" "${study}/data"; then
+    printf "Error: Could not link all read files into %s\n" "${study}/data" >&2
+    exit 1
+fi
 
 printf "Creating subdirectories...\n"
 /usr/bin/mkdir "${study}/sandbox"
 /usr/bin/mkdir "${study}/results"
 /usr/bin/mkdir "${study}/scripts"
+trap - EXIT
 
 printf "Creation of study directory complete!\n"
 printf "Make sure to fill out the README.txt file in the output directory.\n"

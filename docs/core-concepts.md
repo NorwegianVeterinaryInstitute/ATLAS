@@ -12,7 +12,7 @@ Conceptually, ATLAS follows six core concepts: Project, Study, Activation, Freez
 
 ***
 
-
+## Concepts
 ### Project
 A project is defined as a top-level entity, such as research project or a surveillance programme. The key function of the project is to group different studies together under the same top-level directory. This makes it easier to find the studies, and makes it easier to collaborate between colleagues. The project directory is designed to have a longer life-span than a study, as the project may for example be a permanent grouping, e.g. ringtests, surveillance, or other activities with no foreseeable end date. Within the scripts, the project directory is not controlled in any other way than the naming convention when it is generated, providing flexibility for the user. Lastly, the project directories are not removed by ATLAS, and if a project is complete this directory needs to be removed manually.
 
@@ -27,3 +27,15 @@ Freezing involves temporarily packing and moving a study to a storage directory.
 
 ### Archive
 Achiving a study is to permanently pack and move a study for long-term storage. This is done on complete studies. The idea is to create a tarball that can be shared, f.ex. in a research paper.
+
+## Script order
+The scripts are used in a specific order because each step prepares files or directories required by the next. First, create a project once, then activate the sequencing data to make the selected reads available in ACTIVE_DATA_DIR for a planned study. Use that activated data to create the study directory, where analysis and results are organized.
+
+The usual order is:
+
+1. Create a project with `create_project.sh`.
+2. Activate data with `activate_data.sh`.
+3. Create a study with `create_study.sh`.
+4. Analyze the data. If needed, append more data using `activate_data.sh` in append mode.
+5. Optionally freeze and later thaw the study with `freeze_study.sh` and `thaw_study.sh`. This pair is for temporarily freeing storage while keeping the study restorable.
+6. Archive the completed study with `archive_study.sh`. Archiving is the final step; it is not required before or after freezing, and removes the active study and data after successful archiving.

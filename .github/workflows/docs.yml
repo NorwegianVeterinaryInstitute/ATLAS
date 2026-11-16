@@ -26,6 +26,8 @@ jobs:
       # 2 Install uv
       - name: Install uv
         uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: false
 
       # 3 Generate script help pages from -h output
       - name: Generate script help

@@ -5,6 +5,9 @@ Archive a study by creating a tarball, transferring it to `ARCHIVE_DIR`, validat
 #### File deletion warning:
 The script will delete the local study directory after successful archiving, as well as the connected active data directory in `ACTIVE_DATA_DIR/study_${study_dir}`. This is done by design.
 
+#### Source tarballs must stay in place
+The archived study holds links to the reads, not the reads themselves. The reads can only be restored from the source tarballs listed in the study's `data.csv`, so the script checks that they all exist before archiving, and refuses otherwise.
+
 ## When To Use
 Use this script when a study is finalized and should be moved from active project storage to permanent archive storage.
 
@@ -22,10 +25,12 @@ Use this script when a study is finalized and should be moved from active projec
     - `PROJ_DIR`
     - `ARCHIVE_DIR`
     - `ACTIVE_DATA_DIR`
-    - `ARCHIVE_SIZE_THRESHOLD_GB` (optional, defaults to 250)
+    - `ARCHIVE_SIZE_THRESHOLD_GB` (optional, a whole number without leading zeros, defaults to 250)
 - Project directory exists under `PROJ_DIR`.
 - Study directory exists under `PROJ_DIR/project_name`.
+- `ARCHIVE_DIR` exists.
 - Study not already archived in `ARCHIVE_DIR`.
+- The source tarballs listed in the study's `data.csv` exist.
 
 ## Required Study Structure Before Archiving
 The script enforces:
@@ -56,8 +61,16 @@ In project storage:
     - Project path under `PROJ_DIR` not found.
 - Supplied study directory does not exist.
     - Study path not found.
+- Archive directory does not exist: ...
+    - `ARCHIVE_DIR` is wrong or not mounted.
+- Error: ARCHIVE_SIZE_THRESHOLD_GB must be a whole number of GB...
+    - Fix the value in the config file, e.g. `250`. Leading zeros are rejected because bash would read the number as octal.
 - Study already archived. Please verify name of the study.
     - Same archive already exists in `ARCHIVE_DIR`.
+- Error: Tarball not found: ... / The reads can only be restored from the source tarballs. Not archiving.
+    - A source tarball in the study's `data.csv` has moved or been deleted.
+- Error: Sample <name> not found in ...
+    - A sample in the study's `data.csv` has no reads in its tarball(s), so they could not be restored. Remove such rows from `data.csv` (in the study and in `ACTIVE_DATA_DIR`) and rerun.
 - The `sandbox` directory is still present in the study.
     - Cleanup requirement not satisfied.
 - The `results` directory is not present in the study.

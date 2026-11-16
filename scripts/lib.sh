@@ -10,16 +10,106 @@ strip_quotes() {
     printf "%s" "$str"
 }
 
+# Print the read files in a tarball that belong to a sample, one per line.
+# A read belongs to the sample when its file name (not its directory)
+# contains the sample name. This substring match is deliberate: users pick
+# how specific the sample name is (sample1 or sample1_L001) and must keep
+# names unambiguous within a tarball. tar -tf lists names only, so owner or
+# group names with spaces do not shift any columns.
+list_reads() {
+    local tarpath="$1"
+    local name="$2"
+    local f base
+
+    /usr/bin/tar -tf "$tarpath" 2>/dev/null | while IFS= read -r f; do
+        base="${f##*/}"
+        if [[ "$base" == *"$name"* && "$base" =~ \.(fastq|fq)\.gz$ ]]; then
+            printf "%s\n" "$f"
+        fi
+    done
+}
+
+# Check that every tarball in csv_file exists and holds reads for its sample,
+# and set EXPECTED_READS to the number of reads found. Missing tarballs are
+# printed, and also written to missing_tarballs.csv in the current directory
+# unless write_report is false (for scripts that only check before changing
+# anything). Returns 1 if a tarball is missing or a sample has no reads in
+# any of its tarballs.
 check_tarballs() {
     local csv_file="$1"
+    local write_report="${2:-true}"
     EXPECTED_READS=0
-    local name tarball tarpath count
+    local name tarball tarpath count sample_reads tarball_missing
     local -a tarball_array
     local -a missing_rows=()
+    local -a missing_samples=()
 
     printf "Checking tarballs...\n"
 
-    while IFS="," read -r name tarball; do
+    while IFS="," read -r name tarball || [[ -n "$name" ]]; do
+        name=$(strip_quotes "$name")
+        tarball=$(strip_quotes "$tarball")
+
+        [[ -z "$name" && -z "$tarball" ]] && continue
+
+        IFS=',' read -ra tarball_array <<< "$tarball"
+        sample_reads=0
+        tarball_missing=false
+
+        for tarpath in "${tarball_array[@]}"; do
+            tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
+
+            if [[ ! -f "$tarpath" ]]; then
+                printf "Error: Tarball not found: %s\n" "$tarpath" >&2
+                missing_rows+=("${name},${tarpath}")
+                tarball_missing=true
+            else
+                count=$(list_reads "$tarpath" "$name" | /usr/bin/grep -c .)
+                sample_reads=$((sample_reads + count))
+            fi
+        done
+        EXPECTED_READS=$((EXPECTED_READS + sample_reads))
+
+        # A missing tarball is reported above; only flag the sample if all
+        # its tarballs were there
+        if [[ $sample_reads -eq 0 ]] && ! $tarball_missing; then
+            printf "Error: Sample %s not found in %s\n" "$name" "$tarball" >&2
+            missing_samples+=("$name")
+        fi
+    done < <(/usr/bin/tail -n +2 "$csv_file")
+
+    if ! $write_report; then
+        [[ ${#missing_rows[@]} -eq 0 ]] || return 1
+    else
+        # Rewrite the report on every run so it only lists what is missing now
+        if [[ ${#missing_rows[@]} -gt 0 ]]; then
+            printf "%s\n" "${missing_rows[@]}" > missing_tarballs.csv
+            printf "One or more tarballs are missing (listed in %s). Please fix and rerun.\n" "${PWD}/missing_tarballs.csv" >&2
+            return 1
+        fi
+        /usr/bin/rm -f missing_tarballs.csv
+    fi
+
+    if [[ ${#missing_samples[@]} -gt 0 ]]; then
+        printf "Check the sample names (a read belongs to a sample when its file name contains the name). Nothing was changed.\n" >&2
+        return 1
+    fi
+}
+
+# Report reads that would overwrite each other: a file name listed more than
+# once across the CSV (two tarballs, two directories in one tarball, a sample
+# listed twice, or one sample name contained in another), or a file name
+# already present in dest_dir (append mode; pass "" to skip). Prints one line
+# per clash and returns 1 if there are any.
+find_read_clashes() {
+    local csv_file="$1"
+    local dest_dir="$2"
+    local name tarball tarpath f base
+    local found=0
+    local -a tarball_array
+    declare -A seen=()
+
+    while IFS="," read -r name tarball || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarball=$(strip_quotes "$tarball")
 
@@ -30,36 +120,45 @@ check_tarballs() {
         for tarpath in "${tarball_array[@]}"; do
             tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
 
-            if [[ ! -f "$tarpath" ]]; then
-                printf "Error: Tarball not found: %s\n" "$tarpath" >&2
-                missing_rows+=("${name},${tarpath}")
-            else
-                count=$(/usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -c "$name.*\(fastq\.gz\|fq\.gz\)$")
-                EXPECTED_READS=$((EXPECTED_READS + count))
-            fi
+            while IFS= read -r f; do
+                base="${f##*/}"
+                if [[ -n "${seen[$base]:-}" ]]; then
+                    printf "%s: in %s and %s\n" "$base" "${seen[$base]}" "${tarpath}:${f}"
+                    found=1
+                elif [[ -n "$dest_dir" && -e "${dest_dir}/${base}" ]]; then
+                    printf "%s: already in %s\n" "$base" "$dest_dir"
+                    found=1
+                fi
+                seen[$base]="${tarpath}:${f}"
+            done < <(list_reads "$tarpath" "$name")
         done
     done < <(/usr/bin/tail -n +2 "$csv_file")
 
-    # Rewrite the report on every run so it only lists what is missing now
-    if [[ ${#missing_rows[@]} -gt 0 ]]; then
-        printf "%s\n" "${missing_rows[@]}" > missing_tarballs.csv
-        printf "One or more tarballs are missing (listed in %s). Please fix and rerun.\n" "${PWD}/missing_tarballs.csv" >&2
-        return 1
-    fi
-    /usr/bin/rm -f missing_tarballs.csv
+    [[ $found -eq 0 ]]
 }
 
+# Extract the reads in csv_file into the current directory. Returns 1 if a
+# sample is not found (check_tarballs normally catches this first), an
+# extraction fails, or fewer reads than EXPECTED_READS (set by
+# check_tarballs) end up in place.
 transfer_files() {
     local csv_file="$1"
     local append_mode="$2"
     local loopcount=0
+    local failed=0
     local sample_found
-    local name tarball tarpath filenames i tarball_name
+    local name tarball tarpath reads i base dir read_list
     local -a tarball_array
+
+    if $append_mode; then
+        read_list=appended_reads.txt
+    else
+        read_list=transferred_reads.txt
+    fi
 
     printf "Transferring files...\n"
 
-    while IFS="," read -r name tarball; do
+    while IFS="," read -r name tarball || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarball=$(strip_quotes "$tarball")
 
@@ -71,49 +170,76 @@ transfer_files() {
         for tarpath in "${tarball_array[@]}"; do
             tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
 
-            if /usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -q "$name"; then
+            reads=$(list_reads "$tarpath" "$name")
+            if [[ -n "$reads" ]]; then
                 sample_found=1
-                filenames=$(/usr/bin/tar -tvf "$tarpath" | /usr/bin/grep "$name" | /usr/bin/grep -E 'fastq\.gz$|fq\.gz$' | /usr/bin/awk '{print $6}')
 
-                for i in $filenames; do
-                    /usr/bin/tar -xf "$tarpath" "$i"
-                    base=$(/usr/bin/basename "$i")
-                    /usr/bin/mv "$i" .
-                    /usr/bin/chmod 444 "$base"
-                    /usr/bin/sha512sum "$base" >> sha512sums.txt
-                    if $append_mode; then
-                        printf "%s\n" "$base" >> appended_reads.txt
-                    else
-                        printf "%s\n" "$base" >> transferred_reads.txt
+                while IFS= read -r i; do
+                    base="${i##*/}"
+                    if ! /usr/bin/tar -xf "$tarpath" "$i"; then
+                        printf "Error: Could not extract %s from %s\n" "$i" "$tarpath" >&2
+                        failed=1
+                        continue
                     fi
-                    tarball_name=$(/usr/bin/basename "$tarpath")
-                    /usr/bin/rm -rf "${dest:?}/${tarball_name%.tar}"
-                    ((loopcount++))
-                done
+                    # Reads inside a directory in the tarball: move them up
+                    # and remove the directories tar created, if now empty
+                    if [[ "${i#./}" == */* ]]; then
+                        if ! /usr/bin/mv "$i" .; then
+                            printf "Error: Could not move %s into place\n" "$i" >&2
+                            failed=1
+                            continue
+                        fi
+                        dir="${i#./}"
+                        /usr/bin/rmdir -p --ignore-fail-on-non-empty "${dir%/*}"
+                    fi
+                    if [[ ! -f "$base" ]]; then
+                        printf "Error: %s missing after extraction\n" "$base" >&2
+                        failed=1
+                        continue
+                    fi
+                    # Callers run this function in an if, where set -e does
+                    # not apply, so these writes are checked by hand. A read
+                    # only counts once its checksum and list entry are in.
+                    if ! /usr/bin/chmod 444 "$base" ||
+                        ! /usr/bin/sha512sum "$base" >> sha512sums.txt ||
+                        ! printf "%s\n" "$base" >> "$read_list"; then
+                        printf "Error: Could not record %s in sha512sums.txt or %s\n" "$base" "$read_list" >&2
+                        failed=1
+                        continue
+                    fi
+                    loopcount=$((loopcount + 1))
+                done <<< "$reads"
             fi
         done
 
         if [[ $sample_found -eq 0 ]]; then
-            printf "%s,%s\n" "$name" "$tarball" >> missing_samples.csv
+            printf "Error: Sample %s not found in %s\n" "$name" "$tarball" >&2
+            failed=1
         fi
 
         if [[ ${#tarball_array[@]} -gt 1 ]]; then
             for tarpath in "${tarball_array[@]}"; do
                 tarpath=$(printf "%s" "$tarpath" | /usr/bin/xargs)
-                if ! /usr/bin/tar -tvf "$tarpath" 2>/dev/null | /usr/bin/grep -q "$name"; then
+                if [[ -z "$(list_reads "$tarpath" "$name")" ]]; then
                     printf "Warning: Sample %s not found in tarball %s (but found in others)\n" "$name" "$tarpath"
-                    printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv
+                    if ! printf "%s,%s\n" "$name" "$tarpath" >> missing_in_some_tarballs.csv; then
+                        printf "Error: Could not record %s in missing_in_some_tarballs.csv\n" "$name" >&2
+                        failed=1
+                    fi
                 fi
             done
         fi
     done < <(/usr/bin/tail -n +2 "$csv_file")
 
-    if [[ $loopcount -eq $EXPECTED_READS ]]; then
-        printf "All files transferred.\n"
-    else
-        printf "Warning: Expected %s reads, but found %s\n" "$EXPECTED_READS" "$loopcount"
-        printf "Please check output for missing files.\n"
+    if [[ $loopcount -ne $EXPECTED_READS ]]; then
+        printf "Error: Expected %s reads, but transferred %s\n" "$EXPECTED_READS" "$loopcount" >&2
+        failed=1
     fi
+
+    if [[ $failed -ne 0 ]]; then
+        return 1
+    fi
+    printf "All files transferred.\n"
 }
 
 find_append_conflicts() {
@@ -127,7 +253,7 @@ find_append_conflicts() {
     declare -A reported_pairs=()
 
     # Read existing CSV
-    while IFS=',' read -r name tarballs; do
+    while IFS=',' read -r name tarballs || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarballs=$(strip_quotes "$tarballs")
 
@@ -142,7 +268,7 @@ find_append_conflicts() {
     done < <(/usr/bin/tail -n +2 "$existing_csv")
 
     # Check input CSV against existing CSV
-    while IFS=',' read -r name tarballs; do
+    while IFS=',' read -r name tarballs || [[ -n "$name" ]]; do
         name=$(strip_quotes "$name")
         tarballs=$(strip_quotes "$tarballs")
 
@@ -162,4 +288,23 @@ find_append_conflicts() {
     done < <(/usr/bin/tail -n +2 "$input_csv")
 
     [[ $found_conflicts -eq 0 ]]
+}
+
+# Link every read file (*.fastq.gz, *.fq.gz) in src_dir into dst_dir.
+# Reads that are already linked are skipped, so append mode can link the
+# whole directory again. Any other failure to link is an error.
+link_reads() {
+    local src_dir="$1"
+    local dst_dir="$2"
+    local f
+    local failed=0
+
+    for f in "$src_dir"/*.fastq.gz "$src_dir"/*.fq.gz; do
+        # An unmatched glob stays literal
+        [[ -e "$f" ]] || continue
+        [[ -L "${dst_dir}/${f##*/}" ]] && continue
+        /usr/bin/ln -s "$f" "$dst_dir/" || failed=1
+    done
+
+    return "$failed"
 }

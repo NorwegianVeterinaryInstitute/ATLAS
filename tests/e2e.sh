@@ -140,15 +140,18 @@ EOF
 printf "Project README template\n" > "${TEMPLATE_DIR}/project_readme.txt"
 printf "Study README template\n" > "${TEMPLATE_DIR}/study_readme.txt"
 
-## Dummy tarballs: <run>.tar containing <run>/<sample>_R{1,2}.fastq.gz
+## Dummy tarballs: <run>.tar containing <run>/<sample>_R{1,2}.<READ_EXT>,
+## where READ_EXT defaults to fastq.gz.
 ## run1: sampleA, sampleB. run2: sampleC. run3: sampleD.
+## run5: sampleE, sampleF as .fq.gz (#71).
+## run6: sampleC again, same file names as in run2 (#74).
 make_tarball() {
     local run="$1"; shift
     local sample
     mkdir -p "${RAW_DIR}/${run}"
     for sample in "$@"; do
-        printf "@%s_read1\nACGTACGTAC\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R1.fastq.gz"
-        printf "@%s_read1\nTGCATGCATG\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R2.fastq.gz"
+        printf "@%s_read1\nACGTACGTAC\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R1.${READ_EXT:-fastq.gz}"
+        printf "@%s_read1\nTGCATGCATG\n+\nIIIIIIIIII\n" "$sample" | gzip > "${RAW_DIR}/${run}/${sample}_R2.${READ_EXT:-fastq.gz}"
     done
     tar -cf "${RAW_DIR}/${run}.tar" -C "$RAW_DIR" "$run"
     rm -rf "${RAW_DIR:?}/${run}"
@@ -157,14 +160,56 @@ make_tarball() {
 make_tarball run1 sampleA sampleB
 make_tarball run2 sampleC
 make_tarball run3 sampleD
+READ_EXT=fq.gz make_tarball run5 sampleE sampleF
+make_tarball run6 sampleC
+## run4 tests sample name matching (#69). Its group name has a space, as in
+## tarballs made on a domain-joined machine, which used to shift the columns
+## of `tar -tvf`. s.1 must not match sX1 (no regex); sample1 matches sample10
+## (substring matching is deliberate); "my sample" has a space in its name.
+mkdir -p "${RAW_DIR}/run4"
+for sample in s.1 sX1 sample1 sample10 "my sample"; do
+    printf "@r\nACGT\n+\nIIII\n" | gzip > "${RAW_DIR}/run4/${sample}_R1.fastq.gz"
+done
+tar -cf "${RAW_DIR}/run4.tar" --owner=atlas:1000 --group='domain users:100' -C "$RAW_DIR" run4
+rm -rf "${RAW_DIR:?}/run4"
 
 ## Input CSVs. sampleB is quoted to test quote stripping; missing.csv points
 ## at a tarball that does not exist.
 printf 'sample,tarball\nsampleA,%s\n"sampleB","%s"\n' \
     "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/study1.csv"
 printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run2.tar" > "${ROOT}/study1_append.csv"
-printf 'sample,tarball\nsampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/study2.csv"
+## study2.csv has its own header names, headerless.csv has none (#77)
+printf 'Sample ID,Tarball path\nsampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/study2.csv"
+printf 'sampleD,%s\n' "${RAW_DIR}/run3.tar" > "${ROOT}/headerless.csv"
+## Spreadsheets add trailing commas for empty columns (#115)
+printf 'sampleD,%s,\n' "${RAW_DIR}/run3.tar" > "${ROOT}/headerless_comma.csv"
+printf '"sampleD","%s",,\n' "${RAW_DIR}/run3.tar" > "${ROOT}/quoted_comma.csv"
+printf 'sample,tarball\n"",""\n' > "${ROOT}/no_samples.csv"
 printf 'sample,tarball\nsampleX,%s\n' "${RAW_DIR}/missing.tar" > "${ROOT}/missing.csv"
+## Saved as Excel or a text editor may save it: CRLF line endings and no
+## newline after the last row (#70). The copy checks that the input file is
+## left untouched (#81).
+printf 'sample,tarball\r\nsampleA,%s\r\nsampleB,%s' \
+    "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_newline.csv"
+cp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
+printf 'sample,tarball\nsampleE,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq.csv"
+printf 'sample,tarball\nsampleF,%s\n' "${RAW_DIR}/run5.tar" > "${ROOT}/fq_append.csv"
+printf 'sample,tarball\ns.1,%s\nsample1,%s\nmy sample,%s\n' \
+    "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" "${RAW_DIR}/run4.tar" > "${ROOT}/matching.csv"
+## Same read file names from two tarballs on one line, and appended to a
+## study that already holds them (#74). sampleZ is in no tarball (#78).
+printf 'sample,tarball\nsampleC,"%s,%s"\n' "${RAW_DIR}/run2.tar" "${RAW_DIR}/run6.tar" > "${ROOT}/clash.csv"
+printf 'sample,tarball\nsampleC,%s\n' "${RAW_DIR}/run6.tar" > "${ROOT}/clash_append.csv"
+printf 'sample,tarball\nsampleA,%s\nsampleZ,%s\n' "${RAW_DIR}/run1.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_sample.csv"
+printf 'sample,tarball\nsampleD,%s\nsampleZ,%s\n' "${RAW_DIR}/run3.tar" "${RAW_DIR}/run1.tar" > "${ROOT}/no_sample_append.csv"
+
+## Configs with a missing freezer or archive directory (#72) and a size
+## threshold that is not a number or has a leading zero, which bash reads
+## as octal (#81). Later assignments win.
+{ cat "$ATLAS_CONFIG"; printf 'FREEZE_DIR="%s"\n' "${ROOT}/no_freezer"; } > "${ROOT}/config_no_freezer.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_DIR="%s"\n' "${ROOT}/no_archive"; } > "${ROOT}/config_no_archive.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_SIZE_THRESHOLD_GB="value"\n'; } > "${ROOT}/config_bad_threshold.sh"
+{ cat "$ATLAS_CONFIG"; printf 'ARCHIVE_SIZE_THRESHOLD_GB="080"\n'; } > "${ROOT}/config_octal_threshold.sh"
 
 # Test helpers
 pass=0
@@ -194,6 +239,11 @@ step() {
     fi
 }
 
+# Path of the log written by the last step, to check its messages
+last_log() {
+    printf "%s/%02d.log" "$LOGS" "$step_no"
+}
+
 # check DESCRIPTION TEST-EXPRESSION...
 # The command's own output is discarded; only ok/FAIL is printed.
 check() {
@@ -217,6 +267,10 @@ DS1="TestProj_studyone_20240115"
 DS2="TestProj_studytwo_20240116"
 STUDY1="study_${DS1}"
 STUDY2="study_${DS2}"
+DS3="TestProj_nonewline_20240117"
+STUDY3="study_${DS3}"
+DS4="TestProj_fqreads_20240119"
+STUDY4="study_${DS4}"
 
 # Tests
 printf "ATLAS end-to-end test\nWorking in %s\n" "$ROOT"
@@ -264,6 +318,33 @@ check "sha512sums verify" bash -c "cd '${ACTIVE_DATA_DIR}/${DS1}' && sha512sum -
 check "tarball scratch dir removed" test ! -d "${ACTIVE_DATA_DIR}/${DS1}/run1"
 step "refuses existing output dir" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/study1.csv" -d "$DS1"
 step "activates study two" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/study2.csv" -d "$DS2"
+check "custom header skipped (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS2}" '*.fastq.gz')" -eq 2
+step "activates CSV without header" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/headerless.csv" -d TestProj_noheader_20240118
+check "first row of headerless CSV kept (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_noheader_20240118" '*.fastq.gz')" -eq 2
+check "data.csv gets the standard header" test "$(head -n 1 "${ACTIVE_DATA_DIR}/TestProj_noheader_20240118/data.csv")" = "sample,tarball"
+step "fails on missing CSV" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/nope.csv" -d TestProj_nocsv_20240101
+check "no output dir for missing CSV" test ! -d "${ACTIVE_DATA_DIR}/TestProj_nocsv_20240101"
+step "fails on CSV without samples" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_samples.csv" -d TestProj_nosamples_20240101
+check "no output dir for CSV without samples" test ! -d "${ACTIVE_DATA_DIR}/TestProj_nosamples_20240101"
+step "activates CSV without trailing newline" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_newline.csv" -d "$DS3"
+check "last row of CSV not dropped (4 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS3}" '*.fastq.gz')" -eq 4
+step "activates headerless CSV with trailing comma" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/headerless_comma.csv" -d TestProj_comma_20240122
+check "first row kept despite trailing comma (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_comma_20240122" '*.fastq.gz')" -eq 2
+step "activates quoted CSV with trailing commas" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/quoted_comma.csv" -d TestProj_quotedcomma_20240123
+check "quoted row with trailing commas kept (2 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/TestProj_quotedcomma_20240123" '*.fastq.gz')" -eq 2
+check "input CSV left untouched" cmp "${ROOT}/no_newline.csv" "${ROOT}/no_newline.orig"
+DSM="${ACTIVE_DATA_DIR}/TestProj_matching_20240117"
+step "activates tarball with spaces in group" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/matching.csv" -d TestProj_matching_20240117
+check "matching reads extracted (4 fastq)" test "$(count_files "$DSM" '*.fastq.gz')" -eq 4
+check "dot in sample name matched literally" test -f "${DSM}/s.1_R1.fastq.gz" -a ! -e "${DSM}/sX1_R1.fastq.gz"
+check "sample name matched as substring" test -f "${DSM}/sample10_R1.fastq.gz"
+check "read file name with space extracted" test -f "${DSM}/my sample_R1.fastq.gz"
+step "refuses reads with the same file name" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/clash.csv" -d TestProj_clash_20240120
+check "no output dir for clashing reads" test ! -d "${ACTIVE_DATA_DIR}/TestProj_clash_20240120"
+DSZ="${ACTIVE_DATA_DIR}/TestProj_nosample_20240121"
+step "refuses sample not in tarball" 1 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/no_sample.csv" -d TestProj_nosample_20240121
+check "missing sample reported" grep -q "Sample sampleZ not found" "$(last_log)"
+check "no output dir for missing sample" test ! -e "$DSZ"
 
 # Study creation: directory layout and symlinks into active data
 printf "\ncreate_study.sh\n"
@@ -272,7 +353,20 @@ step "creates study one" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$
 check "study subdirs created" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}/sandbox" -a -d "${PROJ_DIR}/${PROJ}/${STUDY1}/results" -a -d "${PROJ_DIR}/${PROJ}/${STUDY1}/scripts"
 check "4 data symlinks" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 4
 step "creates study two" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS2"
+step "creates study three" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS3"
+## Study four holds only .fq.gz reads (#71)
+step "activates .fq.gz reads" 0 "" bash "${SCRIPTS}/activate_data.sh" -c "${ROOT}/fq.csv" -d "$DS4"
+step "creates study four" 0 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS4"
+check "2 .fq.gz data symlinks" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 2
+check "no literal glob link" test ! -L "${PROJ_DIR}/${PROJ}/${STUDY4}/data/*fastq.gz"
 step "refuses existing study" 1 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d "$DS1"
+## A file missing from the data directory stops create_study, which removes
+## the half-built study instead of reporting success (#73)
+mv "${DSM}/transferred_reads.txt" "${ROOT}/matching_reads.moved"
+step "create_study fails on a missing data file" 1 "" bash "${SCRIPTS}/create_study.sh" -p "$PROJ" -d TestProj_matching_20240117
+mv "${ROOT}/matching_reads.moved" "${DSM}/transferred_reads.txt"
+check "no success reported" bash -c "! grep -q 'complete' '$(last_log)'"
+check "half-built study removed" test ! -e "${PROJ_DIR}/${PROJ}/study_TestProj_matching_20240117"
 
 # Append to an existing study: prompt, conflict check, new reads linked
 printf "\nactivate_data.sh -a (append)\n"
@@ -282,28 +376,121 @@ step "appends sampleC" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" 
 check "6 fastq files in active data" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "6 data symlinks in study" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY1}/data" '*.fastq.gz')" -eq 6
 check "data.csv has 3 samples" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" | grep -c .)" -eq 3
+check "no staging dir left after append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/.append_in_progress"
+## sampleD is valid, sampleZ is in no tarball: nothing may be added (#78)
+step "append refuses sample not in tarball" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/no_sample_append.csv" -d "$DS1"
+check "no reads added for refused append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/sampleD_R1.fastq.gz"
+check "data.csv unchanged after refused append" test "$(tail -n +2 "${ACTIVE_DATA_DIR}/${DS1}/data.csv" | grep -c .)" -eq 3
+## A list that cannot be written fails the append after data.csv and
+## sha512sums.txt were already appended to: those appends and the moved
+## reads must be undone
+chmod 444 "${ACTIVE_DATA_DIR}/${DS1}/appended_reads.txt"
+step "append fails when a list is read-only" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/headerless.csv" -d "$DS1"
+chmod 644 "${ACTIVE_DATA_DIR}/${DS1}/appended_reads.txt"
+check "append failed on the read-only list" grep -q "Could not update .*appended_reads.txt" "$(last_log)"
+check "undo reported complete" grep -q "Nothing was changed" "$(last_log)"
+check "undo left the read-only list alone" bash -c "! grep -q 'truncate' '$(last_log)'"
+check "reads removed after failed append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/sampleD_R1.fastq.gz"
+check "data.csv restored after failed append" test "$(tail -n +2 "${ACTIVE_DATA_DIR}/${DS1}/data.csv" | grep -c .)" -eq 3
+check "checksums restored after failed append" test "$(grep -c . "${ACTIVE_DATA_DIR}/${DS1}/sha512sums.txt")" -eq 6
+check "no staging dir left after failed append" test ! -e "${ACTIVE_DATA_DIR}/${DS1}/.append_in_progress"
+step "append rejects reads already in study" 1 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/clash_append.csv" -d "$DS1"
+check "still 6 checksums after refused append" test "$(grep -c . "${ACTIVE_DATA_DIR}/${DS1}/sha512sums.txt")" -eq 6
+## Study three was activated from a CSV without a trailing newline: the
+## appended row must start on its own line, not be glued to the last one
+step "appends to study from CSV without newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/study1_append.csv" -d "$DS3"
+check "data.csv has 3 samples on separate lines" test "$(tail -n +2 "${PROJ_DIR}/${PROJ}/${STUDY3}/data.csv" | grep -c .)" -eq 3
+## A data.csv written before #105 can lack its final newline (#115)
+truncate -s -1 "${ACTIVE_DATA_DIR}/${DS3}/data.csv"
+step "appends to data.csv without final newline" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/headerless.csv" -d "$DS3"
+check "appended row on its own line" test "$(grep -c '^sample[A-D],' "${PROJ_DIR}/${PROJ}/${STUDY3}/data.csv")" -eq 4
+step "appends .fq.gz reads" 0 "y\n" bash "${SCRIPTS}/activate_data.sh" -a -p "$PROJ" -c "${ROOT}/fq_append.csv" -d "$DS4"
+check "4 .fq.gz data symlinks after append" test "$(count_files "${PROJ_DIR}/${PROJ}/${STUDY4}/data" '*.fq.gz')" -eq 4
 
-# Freeze: study packed into the freezer, study and active data removed
+# Freeze: checks, prompt, study packed into the freezer, study and active
+# data removed
 printf "\nfreeze_study.sh\n"
-step "freezes study one" 0 "" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
+step "refuses when a source tarball is missing" 1 "y\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
+check "study kept when source tarball missing" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "freeze check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
+## A data.csv row whose sample has no reads: the study could not be
+## thawed, so freeze refuses it
+cp "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv" "${ROOT}/study1_data.orig"
+printf 'sampleZ,%s\n' "${RAW_DIR}/run1.tar" >> "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv"
+step "refuses data.csv sample without reads" 1 "y\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "freeze reports the sample" grep -q "Sample sampleZ not found" "$(last_log)"
+check "nothing frozen for sample without reads" test ! -e "${FREEZE_DIR}/${STUDY1}.tar.gz"
+mv "${ROOT}/study1_data.orig" "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv"
+step "refuses missing freezer dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_freezer.sh" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "no file created at freezer path" test ! -e "${ROOT}/no_freezer"
+step "freeze cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "study kept after cancel" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+step "freezes study one with -y" 0 "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY1"
 check "tarball in freezer" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "study dir removed" test ! -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data removed" test ! -d "${ACTIVE_DATA_DIR}/${DS1}"
+check "freezer log names the project" grep -q "^${PROJ}"$'\t'"${STUDY1}"$'\t' "${FREEZE_DIR}/freeze_log.txt"
 
-# Thaw: study unpacked and active data re-created from the source tarballs
+# Thaw: study unpacked and active data re-created from the source tarballs.
+# Checks run before anything is written; a later failure removes what the
+# run created and keeps the frozen copy.
 printf "\nthaw_study.sh\n"
+mv "${RAW_DIR}/run2.tar" "${RAW_DIR}/run2.moved"
+step "refuses when a source tarball is missing" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+mv "${RAW_DIR}/run2.moved" "${RAW_DIR}/run2.tar"
+check "study not unpacked when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "no tarball copied when source tarball missing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "thaw check writes no report file" test ! -e "${ROOT}/missing_tarballs.csv"
+check "freezer tarball kept after refused thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+mkdir "${ACTIVE_DATA_DIR}/${DS1}"
+step "refuses when active data dir exists" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+check "existing active data dir left alone" test -d "${ACTIVE_DATA_DIR}/${DS1}"
+check "study not unpacked when active data dir exists" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+rmdir "${ACTIVE_DATA_DIR}/${DS1}"
+## Late failure: a frozen study whose sha512sums.txt does not match the
+## reads fails at the final comparison
+cp "${FREEZE_DIR}/${STUDY1}.tar.gz" "${ROOT}/frozen.orig"
+mkdir "${ROOT}/tamper"
+tar -xzf "${ROOT}/frozen.orig" -C "${ROOT}/tamper"
+sed -i '1s/^./x/' "${ROOT}/tamper/${STUDY1}/sha512sums.txt"
+tar -czf "${FREEZE_DIR}/${STUDY1}.tar.gz" -C "${ROOT}/tamper" "$STUDY1"
+step "fails when restored reads do not match" 1 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
+check "study dir removed after failed thaw" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}"
+check "copied tarball removed after failed thaw" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "active data removed after failed thaw" test ! -e "${ACTIVE_DATA_DIR}/${DS1}"
+check "freezer tarball kept after failed thaw" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+check "failed thaw not logged" test ! -s "${FREEZE_DIR}/thaw_log.txt"
+mv "${ROOT}/frozen.orig" "${FREEZE_DIR}/${STUDY1}.tar.gz"
 step "thaws study one" 0 "" bash "${SCRIPTS}/thaw_study.sh" -p "$PROJ" -s "$STUDY1"
 check "study dir restored" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
 check "active data restored (6 fastq)" test "$(count_files "${ACTIVE_DATA_DIR}/${DS1}" '*.fastq.gz')" -eq 6
 check "freezer tarball removed" test ! -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
+check "thaw logged" grep -q "$STUDY1" "${FREEZE_DIR}/thaw_log.txt"
 
-# Archive: prompt, sandbox refusal, tarball in archive, cleanup, log
+# Archive: checks, prompt, sandbox refusal, tarball in archive, cleanup, log
 printf "\narchive_study.sh\n"
+step "refuses missing archive dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_archive.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "no file created at archive path" test ! -e "${ROOT}/no_archive"
+## The study still has sandbox/, which also exits 1: check the message
+step "rejects non-numeric size threshold" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_bad_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "non-numeric threshold reported" grep -q "must be a whole number" "$(last_log)"
+step "rejects size threshold with leading zero" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_octal_threshold.sh" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "leading-zero threshold reported" grep -q "must be a whole number" "$(last_log)"
 step "archive cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 step "refuses while sandbox present" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 
 # Setup, not a test: archiving refuses while sandbox/ exists
 rmdir "${PROJ_DIR}/${PROJ}/${STUDY2}/sandbox"
+## Without sandbox/, only the tarball check can refuse this data.csv row
+cp "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv" "${ROOT}/study2_data.orig"
+printf 'sampleZ,%s\n' "${RAW_DIR}/run1.tar" >> "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv"
+step "archive refuses data.csv sample without reads" 1 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "archive reports the sample" grep -q "Sample sampleZ not found" "$(last_log)"
+check "nothing archived for sample without reads" test ! -e "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
+check "study kept for sample without reads" test -d "${PROJ_DIR}/${PROJ}/${STUDY2}"
+mv "${ROOT}/study2_data.orig" "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv"
 step "archives study two" 0 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 check "archive tarball present" test -f "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
 check "archive tarball valid" tar -tzf "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
