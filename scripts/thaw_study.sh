@@ -156,7 +156,7 @@ hash_pre=$(/usr/bin/sha512sum "$frozen" | /usr/bin/awk '{print $1}')
 ## Transfer file
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "$frozen" "${proj_fullpath}/" 2> "$rsync_err_file"; then
+if /usr/bin/rsync -avW --progress --inplace "$frozen" "${fullpath}.tar.gz" 2> "$rsync_err_file"; then
     /usr/bin/rm -f "${rsync_err_file:?}"
 else
     status=$?

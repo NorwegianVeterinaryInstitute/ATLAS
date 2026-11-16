@@ -103,8 +103,12 @@ fi
 # Create project directory and subfiles
 printf "Creating project directory and populating files...\n"
 /usr/bin/mkdir "$dest"
+## dest was checked not to exist, so any exit, Ctrl+C included, removes
+## only what this run created
+trap '/usr/bin/rm -rf "${dest:?}"' EXIT
 user=$(/usr/bin/whoami)
 printf "Created by %s on %s\n" "$user" "$(/usr/bin/date)" > "${dest}/creation.txt"
 /usr/bin/cp "$readme" "${dest}/README.txt"
+trap - EXIT
 printf "Project %s created in %s.\n" "$proj_name" "$dest"
 printf "Please fill out the README.txt file in the project directory.\n"
