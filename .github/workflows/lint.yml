@@ -12,7 +12,12 @@ jobs:
   lint:
     if: ${{ !startsWith(github.head_ref, 'release-please') }}
     name: Lint Bash scripts with ShellCheck + Syntax Check
-    runs-on: ubuntu-latest
+    # Pinned: see the e2e job for why not ubuntu-latest.
+    runs-on: ubuntu-24.04
+    # reviewdog posts review comments with the built-in token.
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       # 1 Checkout repository
@@ -33,7 +38,7 @@ jobs:
       - name: Run ShellCheck with reviewdog
         uses: reviewdog/action-shellcheck@v1
         with:
-          github_token: ${{ secrets.GH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
           filter_mode: diff_context
           fail_level: error
@@ -57,7 +62,12 @@ jobs:
   e2e:
     if: ${{ !startsWith(github.head_ref, 'release-please') }}
     name: End-to-end test on dummy data
-    runs-on: ubuntu-latest
+    # Pinned to 24.04: from 26.04 on, Ubuntu ships uutils (Rust) coreutils
+    # instead of GNU. Its sha512sum reports version 0.x, which
+    # scripts/check_dependencies.sh rejects against the GNU minimum (8.32).
+    # Before moving to a newer image, teach the check about uutils and
+    # confirm it behaves like GNU coreutils for our use.
+    runs-on: ubuntu-24.04
 
     steps:
       # 1 Checkout repository
