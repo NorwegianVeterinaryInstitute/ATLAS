@@ -7,7 +7,8 @@ set -eo pipefail
 # Help function
 show_help() {
     cat << 'EOF'
-Usage: create_project.sh -p PROJECT_NAME
+Usage: atlas create_project -p PROJECT_NAME
+       create_project.sh -p PROJECT_NAME
 
 Create a project directory in the PROJ_DIR directory.
 
@@ -26,8 +27,8 @@ DESCRIPTION:
     - If no project number is available, use other informative info instead
 
 EXAMPLE:
-    create_project.sh -p 12345_MyProject
-    create_project.sh -p Lab_BacterialGenomics
+    atlas create_project -p 12345_MyProject
+    atlas create_project -p Lab_BacterialGenomics
 
 EOF
 }

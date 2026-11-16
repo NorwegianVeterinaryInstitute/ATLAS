@@ -7,7 +7,9 @@ set -eo pipefail
 # Help function
 show_help() {
     cat << EOF
-Usage: freeze_study.sh -s STUDY_DIR -p PROJECT_DIR [-y]
+
+Usage: atlas freeze_study -s STUDY_DIR -p PROJECT_DIR
+       freeze_study.sh -s STUDY_DIR -p PROJECT_DIR
 
 Freeze a study by creating a tarball and transferring it to FREEZE_DIR.
 
@@ -36,7 +38,7 @@ DESCRIPTION:
     data.csv, so those must stay where they are.
 
 EXAMPLE:
-    freeze_study.sh -s study_mydata_20231120 -p myproject
+    atlas freeze_study -s study_mydata_20231120 -p myproject
 
 EOF
 }
