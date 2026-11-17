@@ -189,64 +189,76 @@ fi
 
 # Create experiment tarball
 printf "All checks passed, creating tarball...\n"
+
+## From here on, any exit, Ctrl+C included, removes the tarball and its copy
+## in the archive. The copy gets its final name only once its checksum is
+## verified, so an interrupted transfer never looks like an archived study.
+tarball="${proj_fullpath}/${study_dir}.tar.gz"
+partial="${ARCHIVE_DIR}/.${study_dir}.tar.gz.partial"
+rsync_err_file=""
+cleanup_failed_archive() {
+    /usr/bin/rm -f "${tarball:?}" "${partial:?}" ${rsync_err_file:+"$rsync_err_file"}
+}
+trap cleanup_failed_archive EXIT
+
 cd "$proj_fullpath"
-/usr/bin/tar -czf "${study_dir}.tar.gz" "$study_dir"
+/usr/bin/tar -czf "$tarball" "$study_dir"
 
 # Verify tarball archive
 printf "Verifying archive...\n"
-if /usr/bin/tar -tzf "${study_dir}.tar.gz" > /dev/null; then
+if /usr/bin/tar -tzf "$tarball" > /dev/null; then
     printf "Archive verification successful!\n"
 else
-    printf "Error: Archive verification failed. Deleting corrupt archive.\n"
-    /usr/bin/rm -f "${study_dir}.tar.gz"
+    printf "Error: Archive verification failed. Deleting corrupt archive.\n" >&2
     exit 1
 fi
 
 # Get checksum of archive
 printf "Creating checksum of archive...\n"
-hash_pre="$(/usr/bin/sha512sum "${study_dir}.tar.gz" | awk '{print $1}')"
+hash_pre="$(/usr/bin/sha512sum "$tarball" | /usr/bin/awk '{print $1}')"
 
 # Transfer tarball to storage
 printf "Moving archive to the archive directory...\n"
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "${ARCHIVE_DIR}/" 2> "$rsync_err_file"; then
+if /usr/bin/rsync -avW --progress --inplace "$tarball" "$partial" 2> "$rsync_err_file"; then
     /usr/bin/rm -f "${rsync_err_file:?}"
 else
     status=$?
     printf "rsync failed with exit code %d\n" "$status" >&2
     printf "rsync error output:\n" >&2
     /usr/bin/cat "$rsync_err_file" >&2
-    /usr/bin/rm -f "${rsync_err_file:?}"
-    /usr/bin/rm -f "${study_dir:?}.tar.gz"
     exit "$status"
 fi
 
 # Check tarball checksum after transfer
 printf "Verifying checksum after transfer...\n"
-## A failed hash counts as a mismatch, so the copy is removed below
-if ! hash_post="$(/usr/bin/sha512sum "${ARCHIVE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')"; then
+## A failed hash counts as a mismatch, so the copy is removed
+if ! hash_post="$(/usr/bin/sha512sum "$partial" | /usr/bin/awk '{print $1}')"; then
     hash_post=""
 fi
 
 if [[ "$hash_pre" == "$hash_post" ]]; then
     printf "Checksums are equal, transfer complete!\n"
 else
-    printf "Error: Checksums not equal. Please check files manually.\n"
-    /usr/bin/rm -f "${ARCHIVE_DIR:?}/${study_dir}.tar.gz"
+    printf "Error: Checksums not equal. Please check files manually.\n" >&2
     exit 1
 fi
 
-# Cleanup and logging
-printf "Performing cleanup...\n"
-chmod 444 "${ARCHIVE_DIR:?}/${study_dir}.tar.gz"
-/usr/bin/rm -f "${study_dir:?}.tar.gz"
-/usr/bin/rm -rf "${study_dir:?}"
-/usr/bin/rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"
+/usr/bin/chmod 444 "$partial"
+/usr/bin/mv -T "$partial" "${ARCHIVE_DIR}/${study_dir}.tar.gz"
+trap - EXIT
 
+# Logging and cleanup. Logged first, so an interrupted cleanup still leaves
+# a record that the study is archived.
 printf "Logging the transfer...\n"
 me=$(/usr/bin/whoami)
 printf "%s archived by %s on %s\n" "$study_dir" "$me" "$(/usr/bin/date)" >> "${proj_fullpath}/archive_log.txt"
 printf "%s\t%s\t%s\t%s\n" "$proj_name" "$study_dir" "$me" "$(/usr/bin/date)" >> "${ARCHIVE_DIR}/archive_log.txt"
+
+printf "Performing cleanup...\n"
+/usr/bin/rm -f "${tarball:?}"
+/usr/bin/rm -rf "${study_dir:?}"
+/usr/bin/rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"
 
 printf "Archiving complete!\n"

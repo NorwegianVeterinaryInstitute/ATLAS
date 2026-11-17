@@ -41,7 +41,7 @@ ARGUMENTS:
     -h    Show this help message
 
 REQUIREMENTS:
-    The tools checked by scripts/check_dependencies.sh
+    The tools checked by scripts/check_dependencies.sh, and setsid
     Run as a non-root user (root ignores the read-only file permissions
     that the test checks).
 
@@ -239,6 +239,44 @@ step() {
     fi
 }
 
+# interrupt DESCRIPTION CONDITION STDIN CMD [ARGS...]
+# Runs CMD in its own process group and, once CONDITION (shell code) holds,
+# sends a signal to the whole group, as a terminal does on Ctrl+C. Passes if
+# the signal was sent and CMD failed. Sends SIGTERM, not SIGINT: a
+# background job starts with SIGINT ignored. The scripts' EXIT traps run on
+# either.
+interrupt() {
+    local desc="$1" cond="$2" input="$3"; shift 3
+    local log pid rc i sent=false
+    step_no=$((step_no + 1))
+    log="${LOGS}/$(printf "%02d" "$step_no").log"
+
+    # shellcheck disable=SC2016 # expanded by the inner bash
+    setsid bash -c 'cd "$1" && exec "${@:3}" < <(printf "%b" "$2")' _ "$ROOT" "$input" "$@" > "$log" 2>&1 &
+    pid=$!
+    for ((i = 0; i < 12000; i++)); do
+        if eval "$cond"; then
+            kill -TERM -- "-$pid" && sent=true
+            break
+        fi
+        kill -0 "$pid" 2> /dev/null || break
+        sleep 0.005
+    done
+    wait "$pid"
+    rc=$?
+
+    if $sent && [[ "$rc" -ne 0 ]]; then
+        printf "  ok    %s\n" "$desc"
+        pass=$((pass + 1))
+        $verbose && sed 's/^/        | /' "$log"
+    else
+        printf "  FAIL  %s (signal sent: %s, exit %d)\n" "$desc" "$sent" "$rc"
+        sed 's/^/        | /' "$log"
+        fail=$((fail + 1))
+        failed_steps+=("$desc")
+    fi
+}
+
 # Path of the log written by the last step, to check its messages
 last_log() {
     printf "%s/%02d.log" "$LOGS" "$step_no"
@@ -427,6 +465,24 @@ step "refuses missing freezer dir" 1 "y\n" env ATLAS_CONFIG="${ROOT}/config_no_f
 check "no file created at freezer path" test ! -e "${ROOT}/no_freezer"
 step "freeze cancelled on 'n'" 1 "n\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
 check "study kept after cancel" test -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
+## Interrupted freeze (#116). A large file makes tar and the transfer take
+## long enough to interrupt. The copy in the freezer gets its final name only
+## once verified, so an interrupt leaves no tarball there, partial or not.
+head -c 64M /dev/urandom > "${PROJ_DIR}/${PROJ}/${STUDY1}/results/big.bin"
+interrupt "freeze interrupted while packing" \
+    "test -s '${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz'" \
+    "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY1"
+check "local tarball removed after interrupted packing" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+interrupt "freeze interrupted during transfer" \
+    "compgen -G '${FREEZE_DIR}/.*${STUDY1}*' > /dev/null" \
+    "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY1"
+check "nothing in freezer after interrupted transfer" test "$(find "$FREEZE_DIR" -name "*${STUDY1}*" | wc -l)" -eq 0
+check "local tarball removed after interrupted transfer" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}.tar.gz"
+check "study kept after interrupted freeze" test -f "${PROJ_DIR}/${PROJ}/${STUDY1}/data.csv"
+check "freeze log entry undone after interrupt" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY1}/freeze_log.txt"
+step "freeze runs after an interrupted one" 1 "n\n" bash "${SCRIPTS}/freeze_study.sh" -p "$PROJ" -s "$STUDY1"
+check "rerun reaches the prompt" grep -q "Freezing cancelled" "$(last_log)"
+rm -f "${PROJ_DIR}/${PROJ}/${STUDY1}/results/big.bin"
 step "freezes study one with -y" 0 "" bash "${SCRIPTS}/freeze_study.sh" -y -p "$PROJ" -s "$STUDY1"
 check "tarball in freezer" test -f "${FREEZE_DIR}/${STUDY1}.tar.gz"
 check "study dir removed" test ! -d "${PROJ_DIR}/${PROJ}/${STUDY1}"
@@ -511,6 +567,15 @@ check "archive reports the sample" grep -q "Sample sampleZ not found" "$(last_lo
 check "nothing archived for sample without reads" test ! -e "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
 check "study kept for sample without reads" test -d "${PROJ_DIR}/${PROJ}/${STUDY2}"
 mv "${ROOT}/study2_data.orig" "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv"
+## Interrupted archive (#116), as for freeze above
+head -c 64M /dev/urandom > "${PROJ_DIR}/${PROJ}/${STUDY2}/results/big.bin"
+interrupt "archive interrupted during transfer" \
+    "compgen -G '${ARCHIVE_DIR}/.*${STUDY2}*' > /dev/null" \
+    "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
+check "nothing in archive after interrupted transfer" test "$(find "$ARCHIVE_DIR" -name "*${STUDY2}*" | wc -l)" -eq 0
+check "local tarball removed after interrupted archive" test ! -e "${PROJ_DIR}/${PROJ}/${STUDY2}.tar.gz"
+check "study kept after interrupted archive" test -f "${PROJ_DIR}/${PROJ}/${STUDY2}/data.csv"
+rm -f "${PROJ_DIR}/${PROJ}/${STUDY2}/results/big.bin"
 step "archives study two" 0 "y\n" bash "${SCRIPTS}/archive_study.sh" -p "$PROJ" -s "$STUDY2"
 check "archive tarball present" test -f "${ARCHIVE_DIR}/${STUDY2}.tar.gz"
 check "archive tarball valid" tar -tzf "${ARCHIVE_DIR}/${STUDY2}.tar.gz"

@@ -8,6 +8,9 @@ The script will delete the local study directory after successful archiving, as 
 #### Source tarballs must stay in place
 The archived study holds links to the reads, not the reads themselves. The reads can only be restored from the source tarballs listed in the study's `data.csv`, so the script checks that they all exist before archiving, and refuses otherwise.
 
+#### Failed or interrupted archiving
+The copy in `ARCHIVE_DIR` gets its final name only after its checksum is verified. If archiving fails or is interrupted (Ctrl+C) before that, the script removes the local tarball and the partial copy and keeps the study as it was, so you can rerun it.
+
 ## When To Use
 Use this script when a study is finalized and should be moved from active project storage to permanent archive storage.
 

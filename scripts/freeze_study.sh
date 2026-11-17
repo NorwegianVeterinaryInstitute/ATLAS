@@ -164,46 +164,55 @@ undo_freeze_log() {
     fi
 }
 printf "Frozen by %s on %s\n" "$me" "$(/usr/bin/date)" >> "$freeze_log"
-trap undo_freeze_log EXIT
+
+## From here on, any exit, Ctrl+C included, removes the tarball and its copy
+## in the freezer and takes the log entry out again. The copy gets its final
+## name only once its checksum is verified, so an interrupted transfer never
+## looks like a frozen study.
+tarball="${proj_fullpath}/${study_dir}.tar.gz"
+partial="${FREEZE_DIR}/.${study_dir}.tar.gz.partial"
+rsync_err_file=""
+cleanup_failed_freeze() {
+    /usr/bin/rm -f "${tarball:?}" "${partial:?}" ${rsync_err_file:+"$rsync_err_file"}
+    undo_freeze_log
+}
+trap cleanup_failed_freeze EXIT
 
 cd "$proj_fullpath"
-/usr/bin/tar -czf "${study_dir}.tar.gz" "$study_dir"
+/usr/bin/tar -czf "$tarball" "$study_dir"
 
 # Verify tarball archive
 printf "Verifying archive...\n"
-if /usr/bin/tar -tzf "${study_dir}.tar.gz" > /dev/null; then
+if /usr/bin/tar -tzf "$tarball" > /dev/null; then
     printf "Archive verification successful!\n"
 else
     printf "Error: Archive verification failed. Deleting corrupt archive.\n" >&2
-    /usr/bin/rm -f "${study_dir:?}.tar.gz"
     exit 1
 fi
 
 # Get checksum of archive
 printf "Creating checksum of archive...\n"
-hash_pre=$(/usr/bin/sha512sum "${study_dir}.tar.gz" | /usr/bin/awk '{print $1}')
+hash_pre=$(/usr/bin/sha512sum "$tarball" | /usr/bin/awk '{print $1}')
 
 # Transfer tarball to storage
 printf "Moving archive to freeze directory...\n"
 
 rsync_err_file="$("/usr/bin/mktemp")"
 
-if /usr/bin/rsync -avPW "${study_dir}.tar.gz" "${FREEZE_DIR}/" 2> "$rsync_err_file"; then
-    rm -f "${rsync_err_file:?}"
+if /usr/bin/rsync -avW --progress --inplace "$tarball" "$partial" 2> "$rsync_err_file"; then
+    /usr/bin/rm -f "${rsync_err_file:?}"
 else
     status=$?
     printf "rsync failed with exit code %d\n" "$status" >&2
     printf "rsync error output:\n" >&2
     /usr/bin/cat "$rsync_err_file" >&2
-    /usr/bin/rm -f "${rsync_err_file:?}"
-    /usr/bin/rm -f "${study_dir:?}.tar.gz"
     exit "$status"
 fi
 
 # Check tarball checksum after transfer
 printf "Verifying checksum after transfer...\n"
-## A failed hash counts as a mismatch, so the copy is removed below
-if ! hash_post=$(/usr/bin/sha512sum "${FREEZE_DIR}/${study_dir}.tar.gz" | /usr/bin/awk '{print $1}'); then
+## A failed hash counts as a mismatch, so the copy is removed
+if ! hash_post=$(/usr/bin/sha512sum "$partial" | /usr/bin/awk '{print $1}'); then
     hash_post=""
 fi
 
@@ -211,9 +220,10 @@ if [[ "$hash_pre" == "$hash_post" ]]; then
     printf "Checksums are equal!\n"
 else
     printf "Error: Checksums not equal. Please check files manually.\n" >&2
-    /usr/bin/rm -f "${FREEZE_DIR:?}/${study_dir}.tar.gz"
     exit 1
 fi
+
+/usr/bin/mv -T "$partial" "${FREEZE_DIR}/${study_dir}.tar.gz"
 
 # Log the freezing and cleanup
 trap - EXIT
@@ -221,7 +231,7 @@ printf "Logging the freezing and cleaning up files...\n"
 printf "%s frozen by %s on %s\n" "$study_dir" "$me" "$(/usr/bin/date)" >> "${proj_fullpath}/freeze_log.txt"
 printf "%s\t%s\t%s\t%s\n" "$proj_name" "$study_dir" "$me" "$(/usr/bin/date)" >> "${FREEZE_DIR}/freeze_log.txt"
 /usr/bin/rm -rf "${fullpath:?}"
-/usr/bin/rm -f "${fullpath:?}.tar.gz"
+/usr/bin/rm -f "${tarball:?}"
 /usr/bin/rm -rf "${ACTIVE_DATA_DIR:?}/${study_dir##study_}"
 
 printf "Freezing complete!\n"
