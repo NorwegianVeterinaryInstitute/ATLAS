@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.4.1...v1.5.0) (2026-11-17)
+
+
+### Features
+
+* add atlas command to run all scripts ([#103](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/103)) ([48a896a](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/48a896a8c0c0956e6e03b7dbd74a34915251c15e))
+
+
+### Bug Fixes
+
+* clean up after interrupted freeze or archive ([#129](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/129)) ([5a41ee9](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/5a41ee94fccf945d0407438bcd2527db3a1be79a))
+* relink study reads after thaw ([#128](https://github.com/NorwegianVeterinaryInstitute/ATLAS/issues/128)) ([a1527f2](https://github.com/NorwegianVeterinaryInstitute/ATLAS/commit/a1527f2a7d15d1b22e80810372534813d3f8fd14))
+
 ## [1.4.1](https://github.com/NorwegianVeterinaryInstitute/ATLAS/compare/v1.4.0...v1.4.1) (2026-11-03)
 
 
