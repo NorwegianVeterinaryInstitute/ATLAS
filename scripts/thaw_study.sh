@@ -25,6 +25,8 @@ DESCRIPTION:
     - Unpacks the tarball to restore the study directory
     - Reconstitutes the study data using activate_data.sh
     - Verifies sha512sums of the restored data
+    - Links the study's data/ to the restored reads, and warns about links
+      that still point at nothing
     - Removes the tarball from freezer after successful restoration
     - Logs the thawing operation
 
@@ -200,6 +202,27 @@ if [[ -n "${test}" ]]; then
     printf "sha512sums not equal, please check the following reads:\n" >&2
     printf "%s\n" "$test" >&2
     exit 1
+fi
+
+## The links in data/ hold the ACTIVE_DATA_DIR of the time the study was
+## made. If that has changed, they point at nothing, or at an old copy that
+## may be removed later: link them to the reads just restored.
+if ! link_reads "$active_dir" "${fullpath}/data" true; then
+    printf "Error: Could not link the restored reads into %s\n" "${fullpath}/data" >&2
+    exit 1
+fi
+## A link still broken points at something thaw does not restore, as every
+## read in sha512sums.txt was checked above. Report it rather than remove
+## it: it may be a sign of lost data.
+broken=()
+for link in "${fullpath}/data"/*; do
+    if [[ -L "$link" && ! -e "$link" ]]; then
+        broken+=("${link##*/} -> $(/usr/bin/readlink "$link")")
+    fi
+done
+if [[ ${#broken[@]} -gt 0 ]]; then
+    printf "Warning: These links in %s point at nothing; check them:\n" "${fullpath}/data" >&2
+    printf "  %s\n" "${broken[@]}" >&2
 fi
 
 ## Thaw verified: keep what was restored even if logging fails
